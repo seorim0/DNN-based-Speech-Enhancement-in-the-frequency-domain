@@ -5,13 +5,13 @@ You can find a list that you can adjust in various ways at config.py, and they a
 Models (Networks)
 - cCRN
 - DCUNET
-- DCCRN
-Loss functions
+- DCCRN   
+Loss functions   
 - MSE
 - SDR
 - SI-SNR
-- SI-SDR
-you can join the loss functions with perceptual loss.
+- SI-SDR   
+you can join the loss functions with perceptual loss.   
 - LMS
 - PMSQE
 
