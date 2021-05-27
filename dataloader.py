@@ -2,13 +2,12 @@ import torch
 import numpy as np
 from torch.utils.data import Dataset, DataLoader
 import config as cfg
-import librosa
 
 
 def create_dataloader(mode, type=0, snr=0):
     if mode == 'train':
         return DataLoader(
-            dataset=Wave_Dataset(mode),
+            dataset=Wave_Dataset(mode, type, snr),
             batch_size=cfg.batch,
             shuffle=True,
             num_workers=0,
@@ -18,7 +17,7 @@ def create_dataloader(mode, type=0, snr=0):
         )
     elif mode == 'valid':
         return DataLoader(
-            dataset=Wave_Dataset(mode),
+            dataset=Wave_Dataset(mode, type, snr),
             batch_size=cfg.batch, shuffle=False, num_workers=0
         )
     elif mode == 'test':
@@ -34,13 +33,12 @@ class Wave_Dataset(Dataset):
         if mode == 'train':
             print('<Training dataset>')
             print('Load the data...')
-            self.input_path = './input/train_dataset.npy'
+            self.input_path = './input/C1_train_dataset.npy'
             self.input = np.load(self.input_path)
         elif mode == 'valid':
             print('<Validation dataset>')
             print('Load the data...')
-            self.input_path = './input/validation_dataset.npy'
-
+            self.input_path = './input/C1_validation_dataset.npy'
             self.input = np.load(self.input_path)
 
             # # if you want to use a part of the dataset
@@ -48,7 +46,7 @@ class Wave_Dataset(Dataset):
         elif mode == 'test':
             print('<Test dataset>')
             print('Load the data...')
-            self.input_path = './input/test_dataset.npy'
+            self.input_path = './input/C1_test_dataset.npy'
 
             self.input = np.load(self.input_path)
             self.input = self.input[type][snr]
