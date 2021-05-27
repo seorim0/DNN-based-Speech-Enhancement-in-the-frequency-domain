@@ -343,8 +343,10 @@ class Writer(SummaryWriter):
         self.add_audio(str(name) + '_clean_target_wav', clean_wav, step, cfg.fs)
         self.add_audio(str(name) + '_estimated_wav', est_wav, step, cfg.fs)
 
-    def save_samples_C2N(self, name, est_noisy_wav, noisy_wav, clean_wav, step):
+    def save_cycle_samples_we_want(self, name, mixed_wav, clean_wav, est_clean_wav, est_noisy_wav, step):
         # <Audio>
-        self.add_audio(str(name) + 'estimated_noisy_wav', est_noisy_wav, step, cfg.fs)
-        self.add_audio(str(name) + '_noisy_target_wav', noisy_wav, step, cfg.fs)
-        self.add_audio(str(name) + 'clean_wav', clean_wav, step, cfg.fs)
+        # <Audio>
+        self.add_audio(str(name) + '_mixed_wav', mixed_wav, step, cfg.fs)
+        self.add_audio(str(name) + '_clean_target_wav', clean_wav, step, cfg.fs)
+        self.add_audio(str(name) + '_estimated_clean_wav', est_clean_wav, step, cfg.fs)
+        self.add_audio(str(name) + '_estimated_noisy_wav', est_noisy_wav, step, cfg.fs)
