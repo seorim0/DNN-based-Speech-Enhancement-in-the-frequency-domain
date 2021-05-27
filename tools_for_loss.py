@@ -3,12 +3,15 @@ import math
 import numpy as np
 import config as cfg
 from asteroid.losses import SingleSrcPMSQE, PITLossWrapper
-from asteroid.filterbanks import STFTFB, Encoder
+from asteroid_filterbanks import STFTFB, Encoder
 
 
 ############################################################################
 #               for model structure & loss function                        #
 ############################################################################
+L1Loss = torch.nn.L1Loss()
+
+
 def remove_dc(data):
     mean = torch.mean(data, -1, keepdim=True)
     data = data - mean
@@ -21,6 +24,13 @@ def l2_norm(s1, s2):
 
     norm = torch.sum(s1 * s2, -1, keepdim=True)
     return norm
+
+
+def sdr_linear(s1, s2, eps=1e-8):
+    sn = l2_norm(s1, s1)
+    sn_m_shn = l2_norm(s1 - s2, s1 - s2)
+    sdr_loss = sn**2 / (sn_m_shn**2 + eps)
+    return torch.mean(sdr_loss)
 
 
 def sdr(s1, s2, eps=1e-8):
@@ -250,4 +260,4 @@ def get_array_lms_loss(clean_array, est_array):
 #                            for pmsqe loss                                #
 ############################################################################
 pmsqe_stft = Encoder(STFTFB(kernel_size=512, n_filters=512, stride=256))
-pmsqe_loss = PITLossWrapper(SingleSrcPMSQE(), pit_from='pw_pt')
+pmsqe = PITLossWrapper(SingleSrcPMSQE(), pit_from='pw_pt')
