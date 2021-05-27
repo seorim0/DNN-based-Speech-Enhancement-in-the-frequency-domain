@@ -7,8 +7,8 @@ import numpy as np
 import tools_for_model as tools
 import config as cfg
 from tools_for_estimate import cal_pesq, cal_stoi
+from tools_for_loss import L1Loss
 
-L1Loss = torch.nn.L1Loss()
 
 
 #######################################################################
