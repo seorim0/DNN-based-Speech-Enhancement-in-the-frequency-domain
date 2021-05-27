@@ -117,9 +117,9 @@ else:  # First learning
 
     # Set a log file to store progress.
     dir_to_save = cfg.job_dir + cfg.expr_num + '_%d.%d' % (time.localtime().tm_mon,
-                  time.localtime().tm_mday) + '_%s' % cfg.model + '_%s' % cfg.loss
+                                                           time.localtime().tm_mday) + '_%s' % cfg.model + '_%s' % cfg.loss
     dir_to_logs = cfg.logs_dir + cfg.expr_num + '_%d.%d' % (time.localtime().tm_mon,
-                  time.localtime().tm_mday) + '_%s' % cfg.model + '_%s' % cfg.loss
+                                                            time.localtime().tm_mday) + '_%s' % cfg.model + '_%s' % cfg.loss
 
 # make the file directory
 if not os.path.exists(dir_to_save):
@@ -195,18 +195,18 @@ if cfg.cycle:
                       train_C2N_NL1_loss, vali_C2N_NL1_loss, train_N2C_CL1_loss, vali_N2C_CL1_loss))
         # log file save
         fp.write('Epoch [{}] | T {:.6f} | V {:.6} takes {:.2f} seconds\n'
-              .format(epoch, train_toral_loss, vali_toral_loss, time.time() - start_time))
-        fp.write('           | main loss: T {:.6f} V {:.6f} | C2N loss: T {:.6f} V {:.6f} | C2N loss: T {:.6f} V {:.6f}'
-              .format(train_main_loss, vali_main_loss,
-                      train_C2N_NL1_loss, vali_C2N_NL1_loss, train_N2C_CL1_loss, vali_N2C_CL1_loss))
-        
+                 .format(epoch, train_toral_loss, vali_toral_loss, time.time() - start_time))
+        fp.write('           | main loss: T {:.6f} V {:.6f} | C2N loss: T {:.6f} V {:.6f} | C2N loss: T {:.6f} V {:.6f}\n'
+                 .format(train_main_loss, vali_main_loss,
+                         train_C2N_NL1_loss, vali_C2N_NL1_loss, train_N2C_CL1_loss, vali_N2C_CL1_loss))
+
         # It takes quite some time to evaluate the scores for each epoch, so you can control the frequency
-        if epoch % 1 == 0:   
+        if epoch % 1 == 0:
             vali_pesq, vali_stoi = model_eval(N2C, validation_loader, direct, dir_to_save, epoch, DEVICE)
             # write the loss on tensorboard per 5 epochs
             writer.log_score(vali_pesq, vali_stoi, epoch)
             print('           | PESQ: V {:.6f} | STOI: V {:.6f} '.format(vali_pesq, vali_stoi))
-            fp.write('           | PESQ: V {:.6f} | STOI: V {:.6f} '.format(vali_pesq, vali_stoi))
+            fp.write('           | PESQ: V {:.6f} | STOI: V {:.6f} \n'.format(vali_pesq, vali_stoi))
 else:
     for epoch in range(epoch_start_idx, cfg.max_epochs):
         start_time = time.time()
@@ -263,7 +263,7 @@ else:
             # write the loss on tensorboard per 5 epochs
             writer.log_score(vali_pesq, vali_stoi, epoch)
             print('          | V PESQ: {:.6f} | STOI: {:.6f} '.format(vali_pesq, vali_stoi))
-            fp.write('          | V PESQ: {:.6f} | STOI: {:.6f} '.format(vali_pesq, vali_stoi))
+            fp.write('          | V PESQ: {:.6f} | STOI: {:.6f} \n'.format(vali_pesq, vali_stoi))
 
 fp.close()
 print('Training has been finished.')
