@@ -4,8 +4,8 @@ import torch.nn.functional as F
 from tools_for_model import ConvSTFT, ConviSTFT, \
     ComplexConv2d, ComplexConvTranspose2d, NavieComplexLSTM, complex_cat, ComplexBatchNorm
 import config as cfg
-from tools_for_loss import sdr, si_sdr, si_snr, get_array_lms_loss, pmsqe_stft, pmsqe
-from asteroid.filterbanks import transforms
+from tools_for_loss import sdr, sdr_linear, si_sdr, si_snr, get_array_lms_loss, pmsqe_stft, pmsqe
+from asteroid_filterbanks import transforms
 
 
 class complex_model(nn.Module):
@@ -17,9 +17,9 @@ class complex_model(nn.Module):
             win_len=cfg.win_len,
             win_inc=cfg.win_inc,
             fft_len=cfg.fft_len,
-            win_type=cfg.window_type,
-            masking_mode='E',
-            use_cbn = False,
+            win_type=cfg.window,
+            masking_mode=None if cfg.masking_mode == 'Direct(None make)' else cfg.masking_mode,
+            use_cbn=True if cfg.batch_norm == 'complex' else False,
             kernel_size=5
     ):
         '''
@@ -281,9 +281,8 @@ class complex_model(nn.Module):
             if cfg.loss == 'MSE':
                 return F.mse_loss(estimated, target, reduction='mean')
             elif cfg.loss == 'SDR':
-                return -sdr(target, estimated)
+                return -sdr_linear(target, estimated)
             elif cfg.loss == 'SI-SNR':
                 return -(si_snr(estimated, target))
             elif cfg.loss == 'SI-SDR':
                 return -(si_sdr(target, estimated))
-
