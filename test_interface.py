@@ -46,14 +46,14 @@ DEVICE = torch.device('cuda')
 
 if cfg.cycle:
     # Set model
-    N2C = complex_model()
-    C2N = complex_model()
+    N2C = complex_model().to(DEVICE)
+    C2N = complex_model().to(DEVICE)
     # Set optimizer and learning rate
     optimizer = torch.optim.Adam(itertools.chain(N2C.parameters(), C2N.parameters()), lr=cfg.learning_rate)
     total_params = calculate_total_params(N2C) + calculate_total_params(C2N)
 else:
     # Set model
-    model = complex_model()
+    model = complex_model().to(DEVICE)
     # Set optimizer and learning rate
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.learning_rate)
     total_params = calculate_total_params(model)
@@ -77,8 +77,7 @@ print('total params   : %d (%.2f M, %.2f MBytes)\n' %
 ###############################################################################
 #                              Create Dataloader                              #
 ###############################################################################
-train_loader = create_dataloader(mode='train')
-validation_loader = create_dataloader(mode='valid')
+tset_loader = create_dataloader(mode='test')
 
 ###############################################################################
 #                        Set a log file to store progress.                    #
@@ -136,28 +135,35 @@ noise_type = ['seen', 'unseen']
 noisy_snr = ['0', '5', '10', '15', '20']
 
 # Road the dataset information to compare
-data_info = np.load('dataset_info.npy')
+data_info = np.load('./input/C1_dataset_info.npy')
 
 for type in range(len(noise_type)):
     for snr in range(len(noisy_snr)):
 
         test_loader = create_dataloader(mode='test', type=type, snr=snr)
         test_pesq, test_stoi, test_csig, test_cbak, test_cvol = model_test(
-            noise_type[type], noisy_snr[snr], model, test_loader, dir_to_save, DEVICE)
+            noise_type[type], noisy_snr[snr], model, test_loader, direct, dir_to_save, cfg.chkpt, DEVICE)
 
         # Road the score to compare
-        noisy_pesq = data_info[0]
-        noisy_stoi = data_info[1]
-        noisy_csig = data_info[2]
-        noisy_cbak = data_info[3]
-        noisy_cvol = data_info[4]
+        if snr == 0:
+            noisy_pesq = data_info[snr][0][0]
+            noisy_stoi = data_info[snr][0][1]
+            noisy_csig = data_info[snr][0][2]
+            noisy_cbak = data_info[snr][0][3]
+            noisy_cvol = data_info[snr][0][4]
+        else:
+            noisy_pesq = data_info[snr][0]
+            noisy_stoi = data_info[snr][1]
+            noisy_csig = data_info[snr][2]
+            noisy_cbak = data_info[snr][3]
+            noisy_cvol = data_info[snr][4]
 
         print('Noise type {} | snr {}'.format(noise_type[type], noisy_snr[snr]))
         fp.write('\n\nNoise type {} | snr {}'.format(noise_type[type], noisy_snr[snr]))
-        print('Test loss {:.6} | PESQ: REF {:.6} EST {:.6} | REF {:.6} EST STOI {:.6}'
+        print('PESQ: REF {:.6} EST {:.6} | REF {:.6} EST STOI {:.6}'
               .format(noisy_pesq, test_pesq, noisy_stoi, test_stoi))
         print('REF CSIG {:.6f} | CBAK {:.6f} | COVL {:.6f}'.format(noisy_csig, noisy_cbak, noisy_cvol))
         print('    CSIG {:.6f} | CBAK {:.6f} | COVL {:.6f}'.format(test_csig, test_cbak, test_cvol))
-        fp.write('Test loss {:.6f} | PESQ: REF {:.6} EST {:.6} | REF {:.6} EST STOI {:.6f}'
+        fp.write('PESQ: REF {:.6} EST {:.6} | REF {:.6} EST STOI {:.6f}'
                  .format(noisy_pesq, test_pesq, noisy_stoi, test_stoi))
 
