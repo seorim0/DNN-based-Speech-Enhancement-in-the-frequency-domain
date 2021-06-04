@@ -8,12 +8,12 @@ you have to change this file.
 #######################################################################
 #                                 path                                #
 #######################################################################
-job_dir = './job/'
+job_dir = './models/'
 logs_dir = './logs/'
-chkpt_model = None
-chkpt = str(90)
+chkpt_model = 'T02_6.3_DCCRN_SDR' #None
+chkpt = str('8')
 if chkpt_model:
-    chkpt_path = job_dir + chkpt_model + 'chkpt_' + chkpt + '.pt'
+    chkpt_path = job_dir + chkpt_model + '/chkpt_' + chkpt + '.pt'
 
 #######################################################################
 #                         possible setting                            #
@@ -28,24 +28,25 @@ mask_type = ['Direct(None make)', 'E', 'C', 'R']
 window_type = ['hanning']
 
 # experiment number setting
-expr_num = ''
+expr_num = 'SSP'
 #######################################################################
 #                           current setting                           #
 #######################################################################
 model = model_list[0]
 cycle = False  # for Cyclic model
-loss = loss_list[0]
-perceptual = perceptual_list[0]
+loss = loss_list[1]
+perceptual = perceptual_list[1]
 lstm = lstm_type[1]
 batch_norm = batch_type[0]
 
-masking_mode = mask_type[0]
+masking_mode = mask_type[1]
+skip_type = True
 window = window_type[0]
 
 # hyper-parameters
 max_epochs = 120
 learning_rate = 0.001
-batch = 6
+batch = 10
 
 # kernel size
 dccrn_kernel_num = [32, 64, 128, 256, 256, 256]
@@ -80,6 +81,7 @@ print('LSTM : {}'.format(lstm))
 print('BATCH NORM : {}'.format(batch_norm))
 print('CYCLE : {}'.format(cycle))
 print('MASKING INFO : {}'.format(masking_mode))
+print('SKIP CONNECTION : {}'.format(skip_type))
 print('\nBATCH : {}'.format(batch))
 print('LEARNING RATE : {}'.format(learning_rate))
 print('--------------------------------------------------------------')
