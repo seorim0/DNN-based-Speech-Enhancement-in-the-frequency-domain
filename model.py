@@ -43,10 +43,7 @@ class complex_model(nn.Module):
         self.output_dim = output_dim
         self.hidden_layers = rnn_layers
         self.kernel_size = kernel_size
-        if cfg.model == 'DCUNET':
-            kernel_num = cfg.dcunet_kernel_num
-        else:
-            kernel_num = cfg.dccrn_kernel_num
+        kernel_num = cfg.dccrn_kernel_num
         self.kernel_num = [2] + kernel_num
         self.masking_mode = masking_mode
 
@@ -103,38 +100,70 @@ class complex_model(nn.Module):
             )
             self.tranform = nn.Linear(self.rnn_units * fac, hidden_dim * self.kernel_num[-1])
 
-        for idx in range(len(self.kernel_num) - 1, 0, -1):
-            if idx != 1:
-                self.decoder.append(
-                    nn.Sequential(
-                        ComplexConvTranspose2d(
-                            self.kernel_num[idx] * 2,
-                            self.kernel_num[idx - 1],
-                            kernel_size=(self.kernel_size, 2),
-                            stride=(2, 1),
-                            padding=(2, 0),
-                            output_padding=(1, 0)
-                        ),
-                        nn.BatchNorm2d(self.kernel_num[idx - 1]) if not use_cbn else ComplexBatchNorm(
-                            self.kernel_num[idx - 1]),
-                        # nn.ELU()
-                        nn.PReLU()
+        if cfg.skip_type:
+            for idx in range(len(self.kernel_num) - 1, 0, -1):
+                if idx != 1:
+                    self.decoder.append(
+                        nn.Sequential(
+                            ComplexConvTranspose2d(
+                                self.kernel_num[idx] * 2,
+                                self.kernel_num[idx - 1],
+                                kernel_size=(self.kernel_size, 2),
+                                stride=(2, 1),
+                                padding=(2, 0),
+                                output_padding=(1, 0)
+                            ),
+                            nn.BatchNorm2d(self.kernel_num[idx - 1]) if not use_cbn else ComplexBatchNorm(
+                                self.kernel_num[idx - 1]),
+                            # nn.ELU()
+                            nn.PReLU()
+                        )
                     )
-                )
-            else:
-                self.decoder.append(
-                    nn.Sequential(
-                        ComplexConvTranspose2d(
-                            self.kernel_num[idx] * 2,
-                            self.kernel_num[idx - 1],
-                            kernel_size=(self.kernel_size, 2),
-                            stride=(2, 1),
-                            padding=(2, 0),
-                            output_padding=(1, 0)
-                        ),
+                else:
+                    self.decoder.append(
+                        nn.Sequential(
+                            ComplexConvTranspose2d(
+                                self.kernel_num[idx] * 2,
+                                self.kernel_num[idx - 1],
+                                kernel_size=(self.kernel_size, 2),
+                                stride=(2, 1),
+                                padding=(2, 0),
+                                output_padding=(1, 0)
+                            ),
+                        )
                     )
-                )
-
+        else:
+            for idx in range(len(self.kernel_num) - 1, 0, -1):
+                if idx != 1:
+                    self.decoder.append(
+                        nn.Sequential(
+                            ComplexConvTranspose2d(
+                                self.kernel_num[idx],
+                                self.kernel_num[idx - 1],
+                                kernel_size=(self.kernel_size, 2),
+                                stride=(2, 1),
+                                padding=(2, 0),
+                                output_padding=(1, 0)
+                            ),
+                            nn.BatchNorm2d(self.kernel_num[idx - 1]) if not use_cbn else ComplexBatchNorm(
+                                self.kernel_num[idx - 1]),
+                            # nn.ELU()
+                            nn.PReLU()
+                        )
+                    )
+                else:
+                    self.decoder.append(
+                        nn.Sequential(
+                            ComplexConvTranspose2d(
+                                self.kernel_num[idx],
+                                self.kernel_num[idx - 1],
+                                kernel_size=(self.kernel_size, 2),
+                                stride=(2, 1),
+                                padding=(2, 0),
+                                output_padding=(1, 0)
+                            ),
+                        )
+                    )
         self.flatten_parameters()
 
     def flatten_parameters(self):
@@ -189,10 +218,15 @@ class complex_model(nn.Module):
 
         out = out.permute(1, 2, 3, 0)
 
-        for idx in range(len(self.decoder)):
-            out = complex_cat([out, encoder_out[-1 - idx]], 1)
-            out = self.decoder[idx](out)
-            out = out[..., 1:]
+        if cfg.skip_type:  # use skip connection
+            for idx in range(len(self.decoder)):
+                out = complex_cat([out, encoder_out[-1 - idx]], 1)
+                out = self.decoder[idx](out)
+                out = out[..., 1:]  #
+        else:
+            for idx in range(len(self.decoder)):
+                out = self.decoder[idx](out)
+                out = out[..., 1:]
 
         if direct_mapping:  # for direct mapping model or Cyclic model
             out_real = out[:, 0]
@@ -220,20 +254,20 @@ class complex_model(nn.Module):
                 mask_mags = torch.tanh(mask_mags)
                 est_mags = mask_mags * spec_mags
                 est_phase = spec_phase + mask_phase
-                real = est_mags * torch.cos(est_phase)
-                imag = est_mags * torch.sin(est_phase)
+                out_real = est_mags * torch.cos(est_phase)
+                out_imag = est_mags * torch.sin(est_phase)
             elif self.masking_mode == 'C':
-                real, imag = real * mask_real - imag * mask_imag, real * mask_imag + imag * mask_real
+                out_real, out_imag = real * mask_real - imag * mask_imag, real * mask_imag + imag * mask_real
             elif self.masking_mode == 'R':
-                real, imag = real * mask_real, imag * mask_imag
+                out_real, out_imag = real * mask_real, imag * mask_imag
 
-            out_spec = torch.cat([real, imag], 1)
+            out_spec = torch.cat([out_real, out_imag], 1)
 
         out_wav = self.istft(out_spec)
         out_wav = torch.squeeze(out_wav, 1)
         out_wav = torch.clamp_(out_wav, -1, 1)
 
-        return out_spec, out_wav
+        return out_real, out_imag, out_wav
 
     def get_params(self, weight_decay=0.0):
         # add L2 penalty
@@ -252,7 +286,7 @@ class complex_model(nn.Module):
         }]
         return params
 
-    def loss(self, estimated, target, out_spec=0, perceptual=False):
+    def loss(self, estimated, target, real_spec=0, img_spec=0, perceptual=False):
         if perceptual:
             if cfg.perceptual == 'LMS':
                 # for lms loss calculation
@@ -261,10 +295,9 @@ class complex_model(nn.Module):
                 clean_imag = clean_specs[:, self.fft_len // 2 + 1:]
                 clean_mags = torch.sqrt(clean_real ** 2 + clean_imag ** 2 + 1e-7)
 
-                real_spec = out_spec[0]
-                img_spec = out_spec[1]
                 est_clean_mags = torch.sqrt(real_spec ** 2 + img_spec ** 2 + 1e-7)
-                return get_array_lms_loss(clean_mags, est_clean_mags)
+                lms_loss = get_array_lms_loss(clean_mags, est_clean_mags)
+                return lms_loss
             elif cfg.perceptual == 'PMSQE':
                 ref_wav = target.reshape(-1, 3, 16000)  # dataset data shape
                 est_wav = estimated.reshape(-1, 3, 16000)
@@ -281,7 +314,7 @@ class complex_model(nn.Module):
             if cfg.loss == 'MSE':
                 return F.mse_loss(estimated, target, reduction='mean')
             elif cfg.loss == 'SDR':
-                return -sdr_linear(target, estimated)
+                return -sdr(target, estimated)
             elif cfg.loss == 'SI-SNR':
                 return -(si_snr(estimated, target))
             elif cfg.loss == 'SI-SDR':
