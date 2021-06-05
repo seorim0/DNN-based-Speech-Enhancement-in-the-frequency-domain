@@ -5,8 +5,9 @@ import numpy as np
 from scipy.signal import get_window
 import torch.nn.functional as F
 from pathlib import Path
-import config as cfg
+import data_config as cfg
 import soundfile
+import librosa
 from matplotlib import pyplot as plt
 
 
@@ -439,3 +440,81 @@ class ConvSTFT(nn.Module):
             mags = torch.sqrt(real ** 2 + imag ** 2)
             phase = torch.atan2(imag, real)
             return mags, phase
+
+
+# noisy - clean pair
+def scan_directory(dir_name):
+    """Scan directory and save address of clean/noisy wav data.
+    Args:
+        dir_name: directroy name to scan
+
+    Returns:
+        addr: all address list of clean/noisy wave data in subdirectory
+    """
+    if os.path.isdir(dir_name) is False:
+        print("[Error] There is no directory '%s'." % dir_name)
+        exit()
+    else:
+        print("Scanning a directory %s " % dir_name)
+
+    addr = []
+    for subdir, dirs, files in os.walk(dir_name):
+        for file in files:
+            if file.endswith(".wav"):
+                filepath = Path(subdir) / file
+                addr_noisy = filepath
+                addr_clean = str(filepath).replace('noisy', 'clean')
+                # 1st '_'
+                idx_1st = addr_clean.find('_')
+                # 2nd '_'
+                idx_2nd = addr_clean[idx_1st + 1:].find('_')
+                # 3rd '_'
+                idx_3rd = addr_clean[idx_1st + 1 + idx_2nd + 1:].find('_')
+                # 4th '_'
+                idx_4th = addr_clean[idx_1st + 1 + idx_2nd + 1 + idx_3rd + 1:].find('_')
+                addr_clean = addr_clean[:idx_1st + 1 + idx_2nd + 1 + idx_3rd + 1 + idx_4th] + '.wav'
+                addr.append([addr_noisy, addr_clean])
+    return addr
+
+
+#######################################################################
+#                           sav pam data                              #
+#######################################################################
+conv_stft = ConvSTFT(cfg.win_len, cfg.win_inc, cfg.fft_len, cfg.window, 'complex', fix=True)
+
+noisy_speech = Path('./data/' + cfg.mode + '/noisy/')
+noisy_speech_list = scan_directory(noisy_speech)
+
+pam = []
+for _, addr_speech in noisy_speech_list:
+    clean_speech, fs = soundfile.read(addr_speech)
+    if fs != cfg.fs:
+        clean_speech = librosa.resample(clean_speech, fs, cfg.fs)
+    if cfg.mode != 'test':
+        if len(clean_speech) / cfg.fs < 3:
+            pad_len = cfg.fs * 3 - len(clean_speech)
+            clean_speech = np.concatenate((clean_speech, np.zeros(pad_len)), 0)
+        else:
+            clean_speech = clean_speech[: cfg.fs * 3]  # 0 ~ 3 sec
+
+    label = torch.FloatTensor([clean_speech])
+    reference = conv_stft(label)
+    real = reference[:, :cfg.fft_len // 2 + 1]
+    imag = reference[:, cfg.fft_len // 2 + 1:]
+
+    spec_mags = torch.sqrt(real ** 2 + imag ** 2 + 1e-8)
+    spec_mags = spec_mags.permute(0, 2, 1)
+
+    print('save the clean pam ...')
+    GMT = np.zeros_like(spec_mags)
+    frame_length = len(spec_mags[0])
+
+    for data_num in range(len(spec_mags)):
+        for frame_num in range(frame_length):
+            GMT[data_num, frame_num, :] = PAM_1(spec_mags[data_num, frame_num, :], cfg.fs)
+            if frame_num % 50 == 0:
+                print(frame_num, ' done')
+    pam.append([addr_speech, GMT])
+    print(addr_speech, ' done!')
+
+np.save('../input/' + cfg.data_name + '_' + cfg.mode + '_pam.npy', pam)
