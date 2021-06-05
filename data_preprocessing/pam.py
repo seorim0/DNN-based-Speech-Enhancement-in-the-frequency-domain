@@ -442,7 +442,7 @@ class ConvSTFT(nn.Module):
             return mags, phase
 
 
-# noisy - clean pair
+# directory read
 def scan_directory(dir_name):
     """Scan directory and save address of clean/noisy wav data.
     Args:
@@ -461,19 +461,8 @@ def scan_directory(dir_name):
     for subdir, dirs, files in os.walk(dir_name):
         for file in files:
             if file.endswith(".wav"):
-                filepath = Path(subdir) / file
-                addr_noisy = filepath
-                addr_clean = str(filepath).replace('noisy', 'clean')
-                # 1st '_'
-                idx_1st = addr_clean.find('_')
-                # 2nd '_'
-                idx_2nd = addr_clean[idx_1st + 1:].find('_')
-                # 3rd '_'
-                idx_3rd = addr_clean[idx_1st + 1 + idx_2nd + 1:].find('_')
-                # 4th '_'
-                idx_4th = addr_clean[idx_1st + 1 + idx_2nd + 1 + idx_3rd + 1:].find('_')
-                addr_clean = addr_clean[:idx_1st + 1 + idx_2nd + 1 + idx_3rd + 1 + idx_4th] + '.wav'
-                addr.append([addr_noisy, addr_clean])
+                addr_clean = Path(subdir) / file
+                addr.append(addr_clean)
     return addr
 
 
@@ -482,11 +471,12 @@ def scan_directory(dir_name):
 #######################################################################
 conv_stft = ConvSTFT(cfg.win_len, cfg.win_inc, cfg.fft_len, cfg.window, 'complex', fix=True)
 
-noisy_speech = Path('./data/' + cfg.mode + '/noisy/')
-noisy_speech_list = scan_directory(noisy_speech)
+speech = Path('./data/' + cfg.mode + '/clean/')
+speech_list = scan_directory(speech)
 
 pam = []
-for _, addr_speech in noisy_speech_list:
+count = 1
+for addr_speech in speech_list:
     clean_speech, fs = soundfile.read(addr_speech)
     if fs != cfg.fs:
         clean_speech = librosa.resample(clean_speech, fs, cfg.fs)
@@ -505,7 +495,6 @@ for _, addr_speech in noisy_speech_list:
     spec_mags = torch.sqrt(real ** 2 + imag ** 2 + 1e-8)
     spec_mags = spec_mags.permute(0, 2, 1)
 
-    print('save the clean pam ...')
     GMT = np.zeros_like(spec_mags)
     frame_length = len(spec_mags[0])
 
@@ -516,5 +505,7 @@ for _, addr_speech in noisy_speech_list:
                 print(frame_num, ' done')
     pam.append([addr_speech, GMT])
     print(addr_speech, ' done!')
+    print('{}/{}'.format(count, len(speech_list)))
+    count += 1
 
 np.save('../input/' + cfg.data_name + '_' + cfg.mode + '_pam.npy', pam)
