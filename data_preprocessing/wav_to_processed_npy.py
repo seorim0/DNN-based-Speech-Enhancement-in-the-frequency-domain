@@ -16,8 +16,18 @@ import soundfile
 import librosa
 import numpy as np
 from pathlib import Path
-from tools_for_model import normalize_dataset
 import data_config as cfg
+
+
+# normalize [-1 1]
+def normalize_dataset(dataset):
+    for i in range(len(dataset)):
+        noisy_max = np.max(abs(dataset[i][0]))
+        dataset[i][0] = dataset[i][0] / noisy_max
+
+        clean_max = np.max(abs(dataset[i][1]))
+        dataset[i][1] = dataset[i][1] / clean_max
+    return dataset
 
 
 # noisy - clean pair
@@ -93,93 +103,222 @@ def scan_directory_for_test(clean_dir_name, noisy_dir_name):
 mode = cfg.mode
 d_name = cfg.data_name
 
-if mode != 'test':
-    noisy_speech = Path('./data/' + mode + '/noisy/')
+if not cfg.pam:
+    if mode != 'test':
+        noisy_speech = Path('./data/' + mode + '/noisy/')
 
-    noisy_speech_list = scan_directory(noisy_speech)
+        noisy_speech_list = scan_directory(noisy_speech)
 
-    # initialize
-    speech_dataset = []
+        # initialize
+        speech_dataset = []
 
-    # read wav files
-    for addr_speech in noisy_speech_list:
-        noisy_speech, fs = soundfile.read(addr_speech[0])
-        if fs != cfg.fs:
-            noisy_speech = librosa.resample(noisy_speech, fs, cfg.fs)
+        # read wav files
+        for addr_speech in noisy_speech_list:
+            noisy_speech, fs = soundfile.read(addr_speech[0])
+            if fs != cfg.fs:
+                noisy_speech = librosa.resample(noisy_speech, fs, cfg.fs)
 
-        clean_speech, fs = soundfile.read(addr_speech[1])
-        if fs != cfg.fs:
-            clean_speech = librosa.resample(clean_speech, fs, cfg.fs)
-        speech_dataset.append([noisy_speech, clean_speech])
+            clean_speech, fs = soundfile.read(addr_speech[1])
+            if fs != cfg.fs:
+                clean_speech = librosa.resample(clean_speech, fs, cfg.fs)
+            speech_dataset.append([noisy_speech, clean_speech])
 
-    # normalization [-1 1]
-    speech_dataset = normalize_dataset(speech_dataset)
+        # normalization [-1 1]
+        speech_dataset = normalize_dataset(speech_dataset)
 
-    # padding for short wave file
-    for k in range(len(speech_dataset)):
-        if len(speech_dataset[k][0]) / cfg.fs < 3:
-            pad_len = cfg.fs * 3 - len(speech_dataset[k][0])
-            speech_dataset[k][0] = np.concatenate((speech_dataset[k][0], np.zeros(pad_len)), 0)
-            speech_dataset[k][1] = np.concatenate((speech_dataset[k][1], np.zeros(pad_len)), 0)
-        else:
-            speech_dataset[k][0] = speech_dataset[k][0][: cfg.fs * 3]  # 0 ~ 3 sec
-            speech_dataset[k][1] = speech_dataset[k][1][: cfg.fs * 3]  # 0 ~ 3 sec
+        # padding for short wave file
+        for k in range(len(speech_dataset)):
+            if len(speech_dataset[k][0]) / cfg.fs < 3:
+                pad_len = cfg.fs * 3 - len(speech_dataset[k][0])
+                speech_dataset[k][0] = np.concatenate((speech_dataset[k][0], np.zeros(pad_len)), 0)
+                speech_dataset[k][1] = np.concatenate((speech_dataset[k][1], np.zeros(pad_len)), 0)
+            else:
+                speech_dataset[k][0] = speech_dataset[k][0][: cfg.fs * 3]  # 0 ~ 3 sec
+                speech_dataset[k][1] = speech_dataset[k][1][: cfg.fs * 3]  # 0 ~ 3 sec
 
-    # save to numpy
-    print('Noisy data number {}'.format(len(speech_dataset)))
-    print('Save dataset...')
-    np.save('./' + mode + '_dataset_' + d_name + '.npy', speech_dataset)
-    print('Complete.')
-else:
-    snr_per_speech_dataset = []
-    test_speech_dataset = []
-
-    noise_type = ['seen/']  # seen / unseen
-    snr = ['0dB/', '5dB/', '10dB/', '15dB', '20dB']
-    for n_type in noise_type:
-        for snr_v in snr:
-            clean_speech = Path('./data/' + mode + '/clean/')
-            if not os.path.exists('./data/' + mode + '/noisy/' + n_type + snr_v):
-                os.mkdir('./data/' + mode + '/noisy/' + n_type + snr_v)
-            noisy_speech = Path('./data/' + mode + '/noisy/' + n_type + snr_v)
-
-            noisy_speech_list = scan_directory_for_test(clean_speech, noisy_speech)
-
-            # initialize
-            speech_dataset = []
-
-            # read wav files
-            for addr_speech in noisy_speech_list:
-                noisy_speech, fs = soundfile.read(addr_speech[0])
-                if fs != cfg.fs:
-                    noisy_speech = librosa.resample(noisy_speech, fs, cfg.fs)
-
-                clean_speech, fs = soundfile.read(addr_speech[1])
-                if fs != cfg.fs:
-                    clean_speech = librosa.resample(clean_speech, fs, cfg.fs)
-                speech_dataset.append([noisy_speech, clean_speech])
-
-            # normalization [-1 1]
-            speech_dataset = normalize_dataset(speech_dataset)
-
-            # padding for short wave file
-            if cfg.padding == True:
-                for k in range(len(speech_dataset)):
-                    if len(speech_dataset[k][0]) / cfg.fs < 3:
-                        pad_len = cfg.fs * 3 - len(speech_dataset[k][0])
-                        speech_dataset[k][0] = np.concatenate((speech_dataset[k][0], np.zeros(pad_len)), 0)
-                        speech_dataset[k][1] = np.concatenate((speech_dataset[k][1], np.zeros(pad_len)), 0)
-                    else:
-                        speech_dataset[k][0] = speech_dataset[k][0][: cfg.fs * 3]  # 0 ~ 3 sec
-                        speech_dataset[k][1] = speech_dataset[k][1][: cfg.fs * 3]  # 0 ~ 3 sec
-
-            snr_per_speech_dataset.append(speech_dataset)
-
-        # [seen, unseen] > [-10dB, .., 10dB] > [noisy, clean]
-        test_speech_dataset.append(snr_per_speech_dataset)
+        # save to numpy
+        print('Noisy data number {}'.format(len(speech_dataset)))
+        print('Save dataset...')
+        np.save('../input/' + d_name + '_' + mode + '_dataset.npy', speech_dataset)
+        print('Complete.')
+    else:
         snr_per_speech_dataset = []
-    # save to numpy
-    print('Noisy data number {}'.format(len(speech_dataset)))
-    print('Save test dataset...')
-    np.save('./' + mode + '_dataset' + d_name + '.npy', test_speech_dataset)
-    print('Complete.')
+        test_speech_dataset = []
+
+        noise_type = ['seen/']  # seen / unseen
+        snr = ['0dB/', '5dB/', '10dB/', '15dB', '20dB']
+        for n_type in noise_type:
+            for snr_v in snr:
+                clean_speech = Path('./data/' + mode + '/clean/')
+                if not os.path.exists('./data/' + mode + '/noisy/' + n_type + snr_v):
+                    os.mkdir('./data/' + mode + '/noisy/' + n_type + snr_v)
+                noisy_speech = Path('./data/' + mode + '/noisy/' + n_type + snr_v)
+
+                noisy_speech_list = scan_directory_for_test(clean_speech, noisy_speech)
+
+                # initialize
+                speech_dataset = []
+
+                # read wav files
+                for addr_speech in noisy_speech_list:
+                    noisy_speech, fs = soundfile.read(addr_speech[0])
+                    if fs != cfg.fs:
+                        noisy_speech = librosa.resample(noisy_speech, fs, cfg.fs)
+
+                    clean_speech, fs = soundfile.read(addr_speech[1])
+                    if fs != cfg.fs:
+                        clean_speech = librosa.resample(clean_speech, fs, cfg.fs)
+                    speech_dataset.append([noisy_speech, clean_speech])
+
+                # normalization [-1 1]
+                speech_dataset = normalize_dataset(speech_dataset)
+
+                # padding for short wave file
+                if cfg.padding == True:
+                    for k in range(len(speech_dataset)):
+                        if len(speech_dataset[k][0]) / cfg.fs < 3:
+                            pad_len = cfg.fs * 3 - len(speech_dataset[k][0])
+                            speech_dataset[k][0] = np.concatenate((speech_dataset[k][0], np.zeros(pad_len)), 0)
+                            speech_dataset[k][1] = np.concatenate((speech_dataset[k][1], np.zeros(pad_len)), 0)
+                        else:
+                            speech_dataset[k][0] = speech_dataset[k][0][: cfg.fs * 3]  # 0 ~ 3 sec
+                            speech_dataset[k][1] = speech_dataset[k][1][: cfg.fs * 3]  # 0 ~ 3 sec
+
+                snr_per_speech_dataset.append(speech_dataset)
+
+            # [seen, unseen] > [-10dB, .., 10dB] > [noisy, clean]
+            test_speech_dataset.append(snr_per_speech_dataset)
+            snr_per_speech_dataset = []
+        # save to numpy
+        print('Noisy data number {}'.format(len(speech_dataset)))
+        print('Save test dataset...')
+        np.save('../input/' + d_name + '_' + mode + '_dataset.npy', test_speech_dataset)
+        print('Complete.')
+else:
+    if mode != 'test':
+        import torch
+        from pam import ConvSTFT, PAM_1
+
+        conv_stft = ConvSTFT(cfg.win_len, cfg.win_inc, cfg.fft_len, cfg.window, 'complex', fix=True)
+
+        noisy_speech = Path('./data/' + mode + '/noisy/')
+
+        noisy_speech_list = scan_directory(noisy_speech)
+        #######################################################################
+        #                               Get PAM                               #
+        #######################################################################
+        # wav to spec
+        pam_name = []
+        for _, addr_speech in noisy_speech_list:
+            clean_speech, fs = soundfile.read(addr_speech)
+            if fs != cfg.fs:
+                clean_speech = librosa.resample(clean_speech, fs, cfg.fs)
+
+            label = torch.FloatTensor([clean_speech])
+            reference = conv_stft(label)
+            real = reference[:, :cfg.fft_len // 2 + 1]
+            imag = reference[:, cfg.fft_len // 2 + 1:]
+
+            spec_mags = torch.sqrt(real ** 2 + imag ** 2 + 1e-8)
+            spec_mags = spec_mags.permute(0, 2, 1)
+
+            print('save the clean pam ...')
+            GMT = np.zeros_like(spec_mags)
+            frame_length = len(spec_mags[0])
+
+            for data_num in range(len(spec_mags)):
+                for frame_num in range(frame_length):
+                    GMT[data_num, frame_num, :] = PAM_1(spec_mags[data_num, frame_num, :], cfg.fs)
+                    if frame_num % 50 == 0:
+                        print(frame_num, ' done')
+            pam_name.append(addr_speech)
+            print(addr_speech, ' done')
+
+        # initialize
+        speech_dataset = []
+
+        # read wav files
+        for addr_speech in noisy_speech_list:
+            noisy_speech, fs = soundfile.read(addr_speech[0])
+            if fs != cfg.fs:
+                noisy_speech = librosa.resample(noisy_speech, fs, cfg.fs)
+
+            corr_index = np.where(pam_name == Path(addr_speech[1]))
+            corr_index = max(corr_index[0])
+
+            clean_speech, fs = soundfile.read(addr_speech[1])
+            if fs != cfg.fs:
+                clean_speech = librosa.resample(clean_speech, fs, cfg.fs)
+            speech_dataset.append([noisy_speech, [clean_speech, GMT[corr_index]]])
+
+        # normalization [-1 1]
+        speech_dataset = normalize_dataset(speech_dataset)
+
+        # padding for short wave file
+        for k in range(len(speech_dataset)):
+            if len(speech_dataset[k][0]) / cfg.fs < 3:
+                pad_len = cfg.fs * 3 - len(speech_dataset[k][0])
+                speech_dataset[k][0] = np.concatenate((speech_dataset[k][0], np.zeros(pad_len)), 0)
+                speech_dataset[k][1] = np.concatenate((speech_dataset[k][1], np.zeros(pad_len)), 0)
+            else:
+                speech_dataset[k][0] = speech_dataset[k][0][: cfg.fs * 3]  # 0 ~ 3 sec
+                speech_dataset[k][1] = speech_dataset[k][1][: cfg.fs * 3]  # 0 ~ 3 sec
+
+        # save to numpy
+        print('Noisy data number {}'.format(len(speech_dataset)))
+        print('Save dataset...')
+        np.save('../input/' + d_name + '_' + mode + '_dataset.npy', speech_dataset)
+        print('Complete.')
+    else:
+        snr_per_speech_dataset = []
+        test_speech_dataset = []
+
+        noise_type = ['seen/']  # seen / unseen
+        snr = ['0dB/', '5dB/', '10dB/', '15dB', '20dB']
+        for n_type in noise_type:
+            for snr_v in snr:
+                clean_speech = Path('./data/' + mode + '/clean/')
+                if not os.path.exists('./data/' + mode + '/noisy/' + n_type + snr_v):
+                    os.mkdir('./data/' + mode + '/noisy/' + n_type + snr_v)
+                noisy_speech = Path('./data/' + mode + '/noisy/' + n_type + snr_v)
+
+                noisy_speech_list = scan_directory_for_test(clean_speech, noisy_speech)
+
+                # initialize
+                speech_dataset = []
+
+                # read wav files
+                for addr_speech in noisy_speech_list:
+                    noisy_speech, fs = soundfile.read(addr_speech[0])
+                    if fs != cfg.fs:
+                        noisy_speech = librosa.resample(noisy_speech, fs, cfg.fs)
+
+                    clean_speech, fs = soundfile.read(addr_speech[1])
+                    if fs != cfg.fs:
+                        clean_speech = librosa.resample(clean_speech, fs, cfg.fs)
+                    speech_dataset.append([noisy_speech, clean_speech])
+
+                # normalization [-1 1]
+                speech_dataset = normalize_dataset(speech_dataset)
+
+                # padding for short wave file
+                if cfg.padding == True:
+                    for k in range(len(speech_dataset)):
+                        if len(speech_dataset[k][0]) / cfg.fs < 3:
+                            pad_len = cfg.fs * 3 - len(speech_dataset[k][0])
+                            speech_dataset[k][0] = np.concatenate((speech_dataset[k][0], np.zeros(pad_len)), 0)
+                            speech_dataset[k][1] = np.concatenate((speech_dataset[k][1], np.zeros(pad_len)), 0)
+                        else:
+                            speech_dataset[k][0] = speech_dataset[k][0][: cfg.fs * 3]  # 0 ~ 3 sec
+                            speech_dataset[k][1] = speech_dataset[k][1][: cfg.fs * 3]  # 0 ~ 3 sec
+
+                snr_per_speech_dataset.append(speech_dataset)
+
+            # [seen, unseen] > [-10dB, .., 10dB] > [noisy, clean]
+            test_speech_dataset.append(snr_per_speech_dataset)
+            snr_per_speech_dataset = []
+        # save to numpy
+        print('Noisy data number {}'.format(len(speech_dataset)))
+        print('Save test dataset...')
+        np.save('../input/' + d_name + '_' + mode + '_dataset.npy', test_speech_dataset)
+        print('Complete.')
