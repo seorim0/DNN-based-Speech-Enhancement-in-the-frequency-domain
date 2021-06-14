@@ -314,7 +314,7 @@ class complex_model(nn.Module):
             if cfg.loss == 'MSE':
                 return F.mse_loss(estimated, target, reduction='mean')
             elif cfg.loss == 'SDR':
-                return -sdr(target, estimated)
+                return -sdr_linear(target, estimated)
             elif cfg.loss == 'SI-SNR':
                 return -(si_snr(estimated, target))
             elif cfg.loss == 'SI-SDR':
