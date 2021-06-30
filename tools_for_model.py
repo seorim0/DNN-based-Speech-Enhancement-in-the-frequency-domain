@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.nn as nn
 import numpy as np
@@ -5,6 +6,8 @@ import time
 import torch.nn.functional as F
 from scipy.signal import get_window
 import matplotlib.pylab as plt
+from config import win_len, win_inc, fft_len, window, DEVICE
+import scipy.io.wavfile as wav
 
 
 ############################################################################
@@ -70,11 +73,11 @@ class ConviSTFT(nn.Module):
     def __init__(self, win_len, win_inc, fft_len=None, win_type='hamming', feature_type='real', fix=True):
         super(ConviSTFT, self).__init__()
         if fft_len == None:
-            self.fft_len = np.int(2**np.ceil(np.log2(win_len)))
+            self.fft_len = np.int(2 ** np.ceil(np.log2(win_len)))
         else:
             self.fft_len = fft_len
         kernel, window = init_kernels(win_len, win_inc, self.fft_len, win_type, invers=True)
-        #self.weight = nn.Parameter(kernel, requires_grad=(not fix))
+        # self.weight = nn.Parameter(kernel, requires_grad=(not fix))
         self.register_buffer('weight', kernel)
         self.feature_type = feature_type
         self.win_type = win_type
@@ -83,7 +86,7 @@ class ConviSTFT(nn.Module):
         self.stride = win_inc
         self.dim = self.fft_len
         self.register_buffer('window', window)
-        self.register_buffer('enframe', torch.eye(win_len)[:,None,:])
+        self.register_buffer('enframe', torch.eye(win_len)[:, None, :])
 
     def forward(self, inputs, phase=None):
         """
@@ -182,10 +185,30 @@ def complex_cat(inputs, axis):
         r, i = torch.chunk(data, 2, axis)  # x = torch.chunk(x, n, dim)  >> x의 dim 차원을 n개씩 잘라서 뽑아옴
         real.append(r)
         imag.append(i)
-    real = torch.cat(real, axis)   # torch.cat : 차원 늘리기
+    real = torch.cat(real, axis)  # torch.cat : 차원 늘리기
     imag = torch.cat(imag, axis)
     outputs = torch.cat([real, imag], axis)
     return outputs
+
+
+############################################################################
+#                         for data normalization                           #
+############################################################################
+class Conv2d(nn.Conv2d):
+    def __init__(self, in_channels, out_channels, kernel_size, stride=1,
+                 padding=0, dilation=1, groups=1, bias=True):
+        super(Conv2d, self).__init__(in_channels, out_channels, kernel_size, stride,
+                                     padding, dilation, groups, bias)
+
+    def forward(self, x):
+        weight = self.weight
+        weight_mean = weight.mean(dim=1, keepdim=True).mean(dim=2,
+                                                            keepdim=True).mean(dim=3, keepdim=True)
+        weight = weight - weight_mean
+        std = weight.view(weight.size(0), -1).std(dim=1).view(-1, 1, 1, 1) + 1e-5
+        weight = weight / std.expand_as(weight)
+        return F.conv2d(x, weight, self.bias, self.stride, self.padding,
+                        self.dilation, self.groups)
 
 
 class ComplexConv2d(nn.Module):
@@ -221,6 +244,7 @@ class ComplexConv2d(nn.Module):
         self.groups = groups
         self.dilation = dilation
         self.complex_axis = complex_axis
+
         self.real_conv = nn.Conv2d(self.in_channels, self.out_channels, kernel_size, self.stride,
                                    padding=[self.padding[0], 0], dilation=self.dilation, groups=self.groups)
         self.imag_conv = nn.Conv2d(self.in_channels, self.out_channels, kernel_size, self.stride,
@@ -230,6 +254,15 @@ class ComplexConv2d(nn.Module):
         nn.init.normal_(self.imag_conv.weight.data, std=0.05)
         nn.init.constant_(self.real_conv.bias, 0.)
         nn.init.constant_(self.imag_conv.bias, 0.)
+
+        # # weight standardization
+        # self.real_conv = Conv2d(self.in_channels, self.out_channels, kernel_size, self.stride,
+        #                            padding=[self.padding[0], 0], dilation=self.dilation, groups=self.groups)
+        # self.imag_conv = Conv2d(self.in_channels, self.out_channels, kernel_size, self.stride,
+        #                            padding=[self.padding[0], 0], dilation=self.dilation, groups=self.groups)
+        #
+        # nn.init.constant_(self.real_conv.bias, 0.)
+        # nn.init.constant_(self.imag_conv.bias, 0.)
 
     def forward(self, inputs):
         if self.padding[1] != 0 and self.causal:
@@ -291,12 +324,22 @@ class ComplexConvTranspose2d(nn.Module):
                                             padding=self.padding, output_padding=output_padding, groups=self.groups)
         self.imag_conv = nn.ConvTranspose2d(self.in_channels, self.out_channels, kernel_size, self.stride,
                                             padding=self.padding, output_padding=output_padding, groups=self.groups)
+
         self.complex_axis = complex_axis
 
-        nn.init.normal_(self.real_conv.weight, std=0.05)
-        nn.init.normal_(self.imag_conv.weight, std=0.05)
+        nn.init.normal_(self.real_conv.weight.data, std=0.05)
+        nn.init.normal_(self.imag_conv.weight.data, std=0.05)
         nn.init.constant_(self.real_conv.bias, 0.)
         nn.init.constant_(self.imag_conv.bias, 0.)
+
+        # self.real_conv = ConvTranspose2d(self.in_channels, self.out_channels, kernel_size, self.stride,
+        #                                     padding=self.padding, output_padding=output_padding, groups=self.groups)
+        # self.imag_conv = ConvTranspose2d(self.in_channels, self.out_channels, kernel_size, self.stride,
+        #                                     padding=self.padding, output_padding=output_padding, groups=self.groups)
+        # self.complex_axis = complex_axis
+        #
+        # nn.init.constant_(self.real_conv.bias, 0.)
+        # nn.init.constant_(self.imag_conv.bias, 0.)
 
     def forward(self, inputs):
 
@@ -545,7 +588,6 @@ def get_mu_sig(data):
         tmp_utt_tmp = np.zeros(dim)
         tmp_utt.append(tmp_utt_tmp)
 
-
     # Get mean.
     for n in range(data_num):
         mu_utt[n] = np.mean(data[n], 0)
@@ -612,10 +654,12 @@ def plot_spectrogram_to_numpy(input_wav, fs, n_fft, n_overlap, win, mode, clim, 
     fig, ax = plt.subplots(figsize=(12, 3))
 
     if mode == 'phase':
-        pxx, freq, t, cax = plt.specgram(input_wav, NFFT=int(n_fft), Fs=int(fs), window=win, noverlap=n_overlap, cmap='jet',
+        pxx, freq, t, cax = plt.specgram(input_wav, NFFT=int(n_fft), Fs=int(fs), window=win, noverlap=n_overlap,
+                                         cmap='jet',
                                          mode=mode)
     else:
-        pxx, freq, t, cax = plt.specgram(input_wav, NFFT=int(n_fft), Fs=int(fs), window=win, noverlap=n_overlap, cmap='jet')
+        pxx, freq, t, cax = plt.specgram(input_wav, NFFT=int(n_fft), Fs=int(fs), window=win, noverlap=n_overlap,
+                                         cmap='jet')
 
     plt.xlabel('Time (s)')
     plt.ylabel('Frequency (Hz)')
@@ -693,6 +737,104 @@ def plot_error_to_numpy(estimated, target, fs, n_fft, n_overlap, win, mode, clim
     data = fig2np(fig)
     plt.close()
     return data
+
+
+stft_for_pam = ConvSTFT(win_len, win_inc, fft_len, window, 'complex', fix=True).to(DEVICE)
+istft_for_pam = ConviSTFT(win_len, win_inc, fft_len, window, 'complex', fix=True).to(DEVICE)
+
+
+def pam_pw_draw(inputs, targets, outputs, residual_noise_wavs, GMTs, dir_to_save, fs, fft_len, epoch):
+    freq_hz = np.arange(1, int(fft_len / 2) + 2) * (fs / fft_len)
+
+    fig = plt.figure()
+    ax1 = fig.add_subplot(1, 1, 1)
+    for data_num in range(6):
+        # i = inputs[data_num].cpu().detach().numpy()
+        # wav.write(dir_to_save + '/noisy.wav', fs, i)
+        # t = targets[data_num].cpu().detach().numpy()
+        # wav.write(dir_to_save + '/target.wav', fs, t)
+        # o = outputs[data_num].cpu().detach().numpy()
+        # wav.write(dir_to_save + '/estimated.wav', fs, o)
+        # r = residual_noise_wavs[data_num].cpu().detach().numpy()
+        # wav.write(dir_to_save + '/residual_noise.wav', fs, r)
+        # # frame level draw
+        # frame_length = len(noise_specs[data_num])
+
+        # i_specs = stft_for_pam(inputs)
+        # i_specs = i_specs[data_num, :, 100:201]
+        # i_specs = i_specs.unsqueeze(0)
+        # i = istft_for_pam(i_specs)
+        # i = i.cpu().detach().numpy()
+        # wav.write(dir_to_save + '/pam/{}_sample/noisy.wav'.format(data_num), fs, i)
+        #
+        # t_specs = stft_for_pam(targets)
+        # t_specs = t_specs[data_num, :, 100:201]
+        # t_specs = t_specs.unsqueeze(0)
+        # t = istft_for_pam(t_specs)
+        # t = t.cpu().detach().numpy()
+        # wav.write(dir_to_save + '/pam/{}_sample/target.wav'.format(data_num), fs, t)
+        #
+        # o_specs = stft_for_pam(outputs)
+        # o_specs = o_specs[data_num, :, 100:201]
+        # o_specs = o_specs.unsqueeze(0)
+        # o = istft_for_pam(o_specs)
+        # o = o.cpu().detach().numpy()
+        # wav.write(dir_to_save + '/pam/{}_sample/estimated.wav'.format(data_num), fs, o)
+        #
+        # r_specs = stft_for_pam(residual_noise_wavs)
+        # r_specs = r_specs[data_num, :, 100:201]
+        # r_specs = r_specs.unsqueeze(0)
+        # r = istft_for_pam(r_specs)
+        # r = r.cpu().detach().numpy()
+        # wav.write(dir_to_save + '/pam/{}_sample/residual.wav'.format(data_num), fs, r)
+
+        for frame_num in range(100, 201):
+            current_GMT = GMTs[data_num, 0, frame_num, :].cpu()
+
+            # get residual noise spec
+            noise_specs = stft_for_pam(residual_noise_wavs)
+            real = noise_specs[:, :fft_len // 2 + 1]
+            imag = noise_specs[:, fft_len // 2 + 1:]
+            noise_spec_mags = torch.sqrt(real ** 2 + imag ** 2 + 1e-8)
+            noise_spec_mags = noise_spec_mags.permute(0, 2, 1)
+
+            # Spectral analysis and SPL Normalization
+            current_noise_spec = noise_spec_mags[data_num, frame_num, :].cpu().detach().numpy()
+            PN = 90.302
+            Noisy_P = PN + 10 * np.log10(current_noise_spec ** 2 + 1e-16)  # Only first half is required
+
+            # figure 1
+            ax1.plot(freq_hz, Noisy_P, 'r')
+            ax1.plot(freq_hz, 10 * np.log10(current_GMT + 1e-7), 'k--', lw=2)
+            gthres = 10 * np.log10(current_GMT + 1e-7).numpy()
+            tmp1 = np.where(Noisy_P < gthres, Noisy_P, gthres)
+            tmp2 = np.where(Noisy_P >= gthres, Noisy_P, gthres)
+            ax1.fill_between(freq_hz, gthres, tmp1, color='yellow', alpha=1.0)
+            ax1.fill_between(freq_hz, gthres, tmp2, color='blue', alpha=1.0)
+
+            ax1.legend(['Noise', 'GMT'])
+            ax1.grid()
+
+            ax1.set_xlim(0, int(fs / 2))
+            ax1.set_ylim(0, 120)
+
+            plt.title('[{} Epoch] {} frame'.format(epoch-1, frame_num))
+            plt.xlabel('Frequency');
+            plt.ylabel('dB');
+            # plt.show()
+
+            # make the file directory to save the samples
+            if not os.path.exists(dir_to_save + '/pam'):
+                os.mkdir(dir_to_save + '/pam')
+            if not os.path.exists(dir_to_save + '/pam/{}_sample'.format(data_num)):
+                os.mkdir(dir_to_save + '/pam/{}_sample'.format(data_num))
+            if not os.path.exists(dir_to_save + '/pam/{}_sample/{}_epoch'.format(data_num, epoch-1)):
+                os.mkdir(dir_to_save + '/pam/{}_sample/{}_epoch'.format(data_num, epoch-1))
+
+            fig.savefig(dir_to_save + '/pam/{}_sample/{}_epoch/{}_frame.png'.format(data_num, epoch-1, frame_num))
+            plt.cla()  # avoid warning ( too many figure )
+            # print('{}_frame.png'.format(frame_num))
+    plt.close(fig)
 
 
 ############################################################################
