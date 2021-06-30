@@ -10,9 +10,9 @@ you have to change this file.
 #######################################################################
 job_dir = './models/'
 logs_dir = './logs/'
-chkpt_model = 'T02_6.3_DCCRN_SDR' #None
-chkpt = str('8')
-if chkpt_model:
+chkpt_model = 'P003_6.30_DCCRN_MSE'
+chkpt = str('3')
+if chkpt_model is not None:
     chkpt_path = job_dir + chkpt_model + '/chkpt_' + chkpt + '.pt'
 
 #######################################################################
@@ -21,21 +21,23 @@ if chkpt_model:
 # the list you can do
 model_list = ['DCCRN']  # ['cCRN', 'DCUNET', 'DCCRN']
 loss_list = ['MSE', 'SDR', 'SI-SNR', 'SI-SDR']
-perceptual_list = ['False', 'LMS', 'PMSQE']
+perceptual_list = ['False', 'LMS', 'PMSQE', 'PAM']
 lstm_type = ['real', 'complex']
 batch_type = ['real', 'complex']
 mask_type = ['Direct(None make)', 'E', 'C', 'R']
 window_type = ['hanning']
 
 # experiment number setting
-expr_num = 'SSP'
+expr_num = 'P003'
+DEVICE = 'cuda'  # if you want to run the code with 'cpu', change 'cpu'
 #######################################################################
 #                           current setting                           #
 #######################################################################
 model = model_list[0]
 cycle = False  # for Cyclic model
-loss = loss_list[1]
-perceptual = perceptual_list[1]
+complex_model_trial = False  ###################
+loss = loss_list[0]
+perceptual = perceptual_list[3]
 lstm = lstm_type[1]
 batch_norm = batch_type[0]
 
@@ -46,7 +48,7 @@ window = window_type[0]
 # hyper-parameters
 max_epochs = 120
 learning_rate = 0.001
-batch = 10
+batch = 15
 
 # kernel size
 dccrn_kernel_num = [32, 64, 128, 256, 256, 256]
@@ -76,12 +78,14 @@ rnn_units = 256
 print('--------------------  C  O  N  F  I  G  ----------------------')
 print('--------------------------------------------------------------')
 print('MODEL INFO : {}'.format(model))
+if complex_model_trial:
+    print('!!!!!!!!!!!!!!!!!!!!!! Trial version !!!!!!!!!!!!!!!!!!!!!!!!!')
 print('LOSS INFO : {}, perceptual : {}'.format(loss, perceptual))
 print('LSTM : {}'.format(lstm))
 print('BATCH NORM : {}'.format(batch_norm))
 print('CYCLE : {}'.format(cycle))
+print('SKIP : {}'.format(skip_type))
 print('MASKING INFO : {}'.format(masking_mode))
-print('SKIP CONNECTION : {}'.format(skip_type))
 print('\nBATCH : {}'.format(batch))
 print('LEARNING RATE : {}'.format(learning_rate))
 print('--------------------------------------------------------------')
