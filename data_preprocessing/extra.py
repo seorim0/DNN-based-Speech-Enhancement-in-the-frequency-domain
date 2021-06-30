@@ -41,6 +41,41 @@ elif cmd == 'noise_resampling':
         wav_write.write(addr, cfg.fs, wav)
 
 
+elif cmd == 'test_one_sample':
+    import torch
+    import soundfile
+    import librosa
+    import scipy.io.wavfile as wav
+    from model import complex_model
+
+    DEVICE = torch.device('cuda')
+
+    job_dir = '../models/'
+    chkpt_model = 'T02_6.3_DCCRN_SDR'  # None
+    chkpt = str('40')  # 82
+    if chkpt_model:
+        chkpt_path = job_dir + chkpt_model + '/chkpt_' + chkpt + '.pt'
+
+    model = complex_model().to(DEVICE)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+
+    checkpoint = torch.load(chkpt_path)
+    model.load_state_dict(checkpoint['model'])
+    optimizer.load_state_dict(checkpoint['optimizer'])
+
+    wav_speech, fs = soundfile.read('extra_output/output_T02_40.wav')
+    if fs != 16000:
+        wav_speech = librosa.resample(wav_speech, fs, 16000)
+    wav_speech = torch.from_numpy(wav_speech)
+    wav_speech = wav_speech.unsqueeze(0)
+    wav_speech = wav_speech.float().to(DEVICE)
+
+    _, _, outputs = model(wav_speech, False)
+
+    output = outputs.cpu().detach().numpy()
+    wav.write('extra_output/outputx2_T02_40.wav', 16000, output[0])
+
+
 elif cmd == 'make_data_info':
     # Scores
     # PESQ > STOI > CSIG > CBAK > COVL
@@ -66,6 +101,34 @@ elif cmd == 'make_data_info':
     print(data_info[0][0][3])
     print(data_info[0][0][4])
 
+
+elif cmd == 'check_dataset_score':
+    from tools_for_estimate import cal_pesq, cal_stoi
+    import numpy as np
+    import torch
+
+    np_load_old = np.load
+    np.load = lambda *a, **k: np_load_old(*a, allow_pickle=True, **k)
+
+    noise_type = ['seen', 'unseen']
+    noisy_snr = ['0', '5', '10', '15', '20']
+
+    dataset = np.load('../input/C1_test_dataset.npy')
+    for type in range(len(noise_type)):
+        for snr in range(len(noisy_snr)):
+            avg_pesq = 0
+            avg_stoi = 0
+            for data_num in range(len(dataset[type][snr])):
+                pesq = cal_pesq([dataset[type][snr][data_num][0]], [dataset[type][snr][data_num][1]])
+                stoi = cal_stoi([dataset[type][snr][data_num][0]], [dataset[type][snr][data_num][1]])
+
+                avg_pesq += pesq[0]
+                avg_stoi += stoi[0]
+            avg_pesq /= len(dataset[type][snr])
+            avg_stoi /= len(dataset[type][snr])
+
+            print('PESQ {:.4} | STOI {:.4}'.format(avg_pesq, avg_stoi))
+            
 
 elif cmd == 'np2wav':
     import numpy as np
