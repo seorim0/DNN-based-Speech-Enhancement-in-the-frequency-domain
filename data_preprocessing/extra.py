@@ -1,5 +1,5 @@
-cmd_list = ['mp3_to_wav', 'noise_resampling', 'make_data_info',
-            'np2wav', 'pam_change', 'draw_pam', 'test_one_sample']
+cmd_list = ['mp3_to_wav', 'noise_resampling', 'test_one_ample', 'make_data_info',
+            'check_dataset_score', 'np2wav', 'pam_change', 'draw_pam']
 cmd = 'np2wav'
 
 if cmd == 'mp3_to_wav':
@@ -128,7 +128,7 @@ elif cmd == 'check_dataset_score':
             avg_stoi /= len(dataset[type][snr])
 
             print('PESQ {:.4} | STOI {:.4}'.format(avg_pesq, avg_stoi))
-            
+
 
 elif cmd == 'np2wav':
     import numpy as np
@@ -776,7 +776,6 @@ elif cmd == 'draw_pam':
         # P_array = np.zeros(spec_mags[0])
         frame_length = len(clean_spec_mags[0])
 
-
         for frame_num in range(frame_length):
             _, freq_hz, GMT[0, frame_num, :] = PAM_1(clean_spec_mags[0, frame_num, :], cfg.fs)
             Noisy_P = spectral_analysis_SPL_normalization(noisy_spec_mags[0, frame_num, :])
@@ -807,11 +806,10 @@ elif cmd == 'draw_pam':
             plt.title('{} frame'.format(frame_num))
             plt.xlabel('Frequency');
             plt.ylabel('dB');
-            #plt.show()
+            # plt.show()
 
             fig.savefig('./pam/{}_frame.png'.format(frame_num))
             print('{}_frame.png'.format(frame_num))
-
 
         # # noise
         # label = torch.FloatTensor([noise])
