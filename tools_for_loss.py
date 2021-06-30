@@ -191,8 +191,10 @@ DEVICE = torch.device('cuda')
 FFT_SIZE = cfg.fft_len
 
 # multi-scale MFCC distance
-MEL_SCALES = [16, 32, 64]  # for LMS
-# PAM : MEL_SCALES = [32, 64]
+if cfg.perceptual == 'LMS':
+    MEL_SCALES = [16, 32, 64]
+elif cfg.perceptual == 'PAM':
+    MEL_SCALES = [32, 64]
 
 
 # given a (symbolic Theano) array of size M x WINDOW_SIZE
@@ -256,6 +258,113 @@ def get_array_lms_loss(clean_array, est_array):
 
     avg_mel_loss = array_mel_loss / len(clean_array)
     return avg_mel_loss
+
+
+############################################################################
+#                            for pam loss                                  #
+############################################################################
+def mel_pow_transform(x):
+    # precompute Mel filterbank: [FFT_SIZE x NUM_MFCC_COEFFS]
+    MEL_FILTERBANKS = []
+    for scale in MEL_SCALES:
+        filterbank_npy = melFilterBank(scale, FFT_SIZE).transpose()
+        torch_filterbank_npy = torch.from_numpy(filterbank_npy).type(torch.FloatTensor)
+        MEL_FILTERBANKS.append(torch_filterbank_npy.to(DEVICE))
+
+    transforms = []
+    # powerSpectrum = torch_dft_mag(x, DFT_REAL, DFT_IMAG)**2
+
+    powerSpectrum = x.view(-1, FFT_SIZE // 2 + 1)
+    powerSpectrum = 1.0 / FFT_SIZE * powerSpectrum
+
+    for filterbank in MEL_FILTERBANKS:
+        filteredSpectrum = torch.mm(powerSpectrum, filterbank)
+        filteredSpectrum = 10.0*torch.log10(filteredSpectrum + 1e-7) + 90.302 # + 90.302dB
+        transforms.append(filteredSpectrum)
+
+    return transforms
+
+
+def mel_pow_transform_for_GMT(x):
+    # precompute Mel filterbank: [FFT_SIZE x NUM_MFCC_COEFFS]
+    MEL_FILTERBANKS = []
+    for scale in MEL_SCALES:
+        filterbank_npy = melFilterBank(scale, FFT_SIZE).transpose()
+        torch_filterbank_npy = torch.from_numpy(filterbank_npy).type(torch.FloatTensor)
+        MEL_FILTERBANKS.append(torch_filterbank_npy.to(DEVICE))
+
+    x = x.view(-1, FFT_SIZE // 2 + 1)
+
+    transforms = []
+
+    for filterbank in MEL_FILTERBANKS:
+        filteredSpectrum = torch.mm(x, filterbank)
+        filteredSpectrum = 10.0*torch.log10(filteredSpectrum + 1e-7)
+        transforms.append(filteredSpectrum)
+
+    return transforms
+
+
+# # perceptual loss function
+# class perceptual_distance(torch.nn.Module):
+#     def __init__(self):
+#         super(perceptual_distance, self).__init__()
+#
+#     def forward(self, y_true, y_pred):
+#         rmse_loss = rmse()
+#         # y_true = torch.reshape(y_true, (-1, WINDOW_SIZE))
+#         # y_pred = torch.reshape(y_pred, (-1, WINDOW_SIZE))
+#
+#         pvec_true = perceptual_transform(y_true)
+#         pvec_pred = perceptual_transform(y_pred)
+#
+#         distances = []
+#         for i in range(0, len(pvec_true)):
+#             error = rmse_loss(pvec_pred[i], pvec_true[i])
+#             error = error.unsqueeze(dim=-1)
+#             distances.append(error)
+#         distances = torch.cat(distances, axis=-1)
+#
+#         loss = torch.mean(distances, axis=-1)
+#         return torch.mean(loss)
+
+
+class pam_loss(torch.nn.Module):
+    def __init__(self):
+        super(pam_loss, self).__init__()
+
+    def forward(self, y_noise_spec, GMT):
+
+        pvec_noise = mel_pow_transform(y_noise_spec)
+        T = mel_pow_transform_for_GMT(GMT)
+
+        distances = []
+        for i in range(0, len(pvec_noise)):
+
+            # erase
+            error = torch.sum(torch.max(pvec_noise[i]-T[i], torch.zeros_like(pvec_noise[i])))
+
+            error = error.unsqueeze(dim=-1)
+            distances.append(error)
+        distances = torch.cat(distances, axis=-1)
+
+        loss = torch.mean(distances, axis=-1)
+        return torch.mean(loss)
+
+
+get_pam_loss = pam_loss()
+
+
+############################################################################
+#                            for pam plot                                  #
+############################################################################
+def spectral_analysis_SPL_normalization(current_frame_mag):
+    PN = 90.302
+
+    # x = current_frame_mag / cfg.fft_len
+    P = PN + 10 * np.log10(current_frame_mag ** 2 + 1e-16)  # Only first half is required
+
+    return P
 
 
 ############################################################################
