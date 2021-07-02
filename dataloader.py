@@ -34,22 +34,25 @@ class Wave_Dataset(Dataset):
     def __init__(self, mode, type, snr):
         # load data
         if mode == 'train':
+            self.mode = 'train'
             print('<Training dataset>')
             print('Load the data...')
-            self.input_path = './input/PAM_C1+train_dataset.npy'
+            self.input_path = './input/PAM_C1+_v2_train_dataset.npy'
             self.input = np.load(self.input_path)
         elif mode == 'valid':
+            self.mode = 'valid'
             print('<Validation dataset>')
             print('Load the data...')
-            self.input_path = './input/PAM_C1+validation_dataset.npy'
+            self.input_path = './input/PAM_C1+_v2_validation_dataset.npy'
             self.input = np.load(self.input_path)
 
             # # if you want to use a part of the dataset
             # self.input = self.input[:500]
         elif mode == 'test':
+            self.mode = 'test'
             print('<Test dataset>')
             print('Load the data...')
-            self.input_path = './input/C1_test_dataset.npy'
+            self.input_path = './input/C1+_v2_test_dataset.npy'
 
             self.input = np.load(self.input_path)
             self.input = self.input[type][snr]
@@ -58,7 +61,7 @@ class Wave_Dataset(Dataset):
         return len(self.input)
 
     def __getitem__(self, idx):
-        if cfg.perceptual == 'PAM':
+        if self.mode != 'test' and cfg.perceptual == 'PAM':
             inputs = self.input[idx][0]
             targets = self.input[idx][1][0]
             GMTs = self.input[idx][1][1]
