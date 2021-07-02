@@ -22,6 +22,7 @@ def model_test(model, validation_loader, noise_type, snr, dir_to_save, direct, e
     all_batch_target = []
     all_batch_output = []
     all_batch_pesq = []
+    all_batch_noisy_pesq = []
     all_batch_stoi = []
 
     # for record the score each samples
@@ -38,8 +39,10 @@ def model_test(model, validation_loader, noise_type, snr, dir_to_save, direct, e
         # estimate the output speech with pesq and stoi
         estimated_wavs = outputs.cpu().detach().numpy()
         clean_wavs = targets.cpu().detach().numpy()
+        noisy_wavs = inputs.cpu().detach().numpy()
 
         pesq = cal_pesq(estimated_wavs, clean_wavs)
+        noisy_pesq = cal_pesq(noisy_wavs, clean_wavs)
         if len(estimated_wavs[0]) > len(clean_wavs[0]):   # why?
             estimated_wavs[0] = estimated_wavs[:,:len(clean_wavs[0])]
         else:
@@ -50,29 +53,33 @@ def model_test(model, validation_loader, noise_type, snr, dir_to_save, direct, e
         pesq = np.reshape(pesq, (1, -1))
         stoi = np.reshape(stoi, (1, -1))
 
+        noisy_pesq = np.reshape(noisy_pesq, (1, -1))
+
         # all batch data array
-        all_batch_input.extend(inputs)
-        all_batch_target.extend(targets)
-        all_batch_output.extend(outputs)
+        all_batch_input.extend(inputs.cpu().detach().numpy())
+        all_batch_target.extend(targets.cpu().detach().numpy())
+        all_batch_output.extend(outputs.cpu().detach().numpy())
         all_batch_pesq.extend(pesq[0])
         all_batch_stoi.extend(stoi[0])
+
+        all_batch_noisy_pesq.extend(noisy_pesq[0])
 
         avg_pesq += sum(pesq[0]) / len(inputs)
         avg_stoi += sum(stoi[0]) / len(inputs)
 
     estfile_path = './output/{}/{}dB/'.format(noise_type, snr)
     for m in range(len(all_batch_output)):
-        est_file_name = '{}dB_{}_est_{}_{:.5}.wav'.format(snr, m + 1, all_batch_pesq[m])
+        est_file_name = '{}dB_{}_{}_est_{:.5}.wav'.format(snr, m + 1, cfg.expr_num, all_batch_pesq[m])
 
-        est_wav = all_batch_output[m].cpu().detach().numpy()
+        est_wav = all_batch_output[m]
         wav_write(estfile_path+est_file_name, cfg.fs, est_wav)
 
-        noisy_file_name = '{}dB/{}dB_{}_noisy_{:.5}.wav'.format(snr, m + 1, all_batch_input[m])
-        noisy_wav = all_batch_input[m].cpu().detach().numpy()
+        noisy_file_name = '{}dB_{}_noisy_{:.5}.wav'.format(snr, m + 1, all_batch_noisy_pesq[m])
+        noisy_wav = all_batch_input[m]
         wav_write(estfile_path+noisy_file_name, cfg.fs, noisy_wav)
 
         clean_file_name = '{}dB_{}_clean.wav'.format(snr, m + 1)
-        clean_wav = all_batch_target[m].cpu().detach().numpy()
+        clean_wav = all_batch_target[m]
         wav_write(estfile_path+clean_file_name, cfg.fs, clean_wav)
 
         CSIG, CBAK, CVOL, _ = composite(estfile_path+clean_file_name, estfile_path+est_file_name)
