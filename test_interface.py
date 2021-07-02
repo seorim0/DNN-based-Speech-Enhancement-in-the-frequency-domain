@@ -42,7 +42,10 @@ def calculate_total_params(our_model):
 #         Parameter Initialization and Setting for model training             #
 ###############################################################################
 # Set device
-DEVICE = torch.device('cuda')
+if cfg.DEVICE == 'cuda':
+    DEVICE = torch.device('cuda')
+else:
+    DEVICE = torch.device('cpu')
 
 if cfg.cycle:
     # Set model
@@ -73,11 +76,6 @@ print('total params   : %d (%.2f M, %.2f MBytes)\n' %
       (total_params,
        total_params / 1000000.0,
        total_params * 4.0 / 1000000.0))
-
-###############################################################################
-#                              Create Dataloader                              #
-###############################################################################
-tset_loader = create_dataloader(mode='test')
 
 ###############################################################################
 #                        Set a log file to store progress.                    #
@@ -135,31 +133,30 @@ noise_type = ['seen', 'unseen']
 noisy_snr = ['0', '5', '10', '15', '20']
 
 # Road the dataset information to compare
-data_info = np.load('./input/C1_dataset_info.npy')
+# data_info = np.load('./input/C1_dataset_info.npy')
+# data_info[0] = data_info[0][0]
 
 for type in range(len(noise_type)):
-    for snr in range(len(noisy_snr)):
+    for snr in range(1, len(noisy_snr)):
 
         test_loader = create_dataloader(mode='test', type=type, snr=snr)
         test_pesq, test_stoi, test_csig, test_cbak, test_cvol = model_test(
-            noise_type[type], noisy_snr[snr], model, test_loader, direct, dir_to_save, cfg.chkpt, DEVICE)
+            model, test_loader, noise_type[type], noisy_snr[snr], dir_to_save, direct, cfg.chkpt, DEVICE)
 
         # Road the score to compare
-        if snr == 0:
-            noisy_pesq = data_info[snr][0][0]
-            noisy_stoi = data_info[snr][0][1]
-            noisy_csig = data_info[snr][0][2]
-            noisy_cbak = data_info[snr][0][3]
-            noisy_cvol = data_info[snr][0][4]
-        else:
-            noisy_pesq = data_info[snr][0]
-            noisy_stoi = data_info[snr][1]
-            noisy_csig = data_info[snr][2]
-            noisy_cbak = data_info[snr][3]
-            noisy_cvol = data_info[snr][4]
+        # noisy_pesq = data_info[type][snr][0]
+        # noisy_stoi = data_info[type][snr][1]
+        # noisy_csig = data_info[type][snr][2]
+        # noisy_cbak = data_info[type][snr][3]
+        # noisy_cvol = data_info[type][snr][4]
+        noisy_pesq = 0
+        noisy_stoi = 0
+        noisy_csig = 0
+        noisy_cbak = 0
+        noisy_cvol = 0
 
-        print('Noise type {} | snr {}'.format(noise_type[type], noisy_snr[snr]))
-        fp.write('\n\nNoise type {} | snr {}'.format(noise_type[type], noisy_snr[snr]))
+        print('Noise type {} | SNR {}'.format(noise_type[type], noisy_snr[snr]))
+        fp.write('\n\nNoise type {} | SNR {}'.format(noise_type[type], noisy_snr[snr]))
         print('PESQ: REF {:.6} EST {:.6} | REF {:.6} EST STOI {:.6}'
               .format(noisy_pesq, test_pesq, noisy_stoi, test_stoi))
         print('REF CSIG {:.6f} | CBAK {:.6f} | COVL {:.6f}'.format(noisy_csig, noisy_cbak, noisy_cvol))
@@ -167,3 +164,22 @@ for type in range(len(noise_type)):
         fp.write('PESQ: REF {:.6} EST {:.6} | REF {:.6} EST STOI {:.6f}'
                  .format(noisy_pesq, test_pesq, noisy_stoi, test_stoi))
 
+# from scipy.io.wavfile import write as wav_write
+#
+# samples = np.load('./input/PAM_C1+validation_dataset.npy')
+# sample_num = 4
+# noisy_speech = samples[sample_num][0]
+# clean_speech = samples[sample_num][1][0]
+#
+# inputs = torch.from_numpy(noisy_speech)
+# inputs = inputs.float().to(DEVICE)
+# inputs = inputs.unsqueeze(0)
+#
+# _, _, outputs = model(inputs, direct_mapping=direct)
+#
+# # estimate the output speech with pesq and stoi
+# estimated_wavs = outputs.detach().numpy()
+#
+# wav_write('./models/sample_'+str(sample_num)+'_est_MSE.wav', 16000, estimated_wavs[0])
+# # wav_write('./models/sample_'+str(sample_num)+'_clean.wav', 16000, clean_speech)
+# # wav_write('./models/sample_'+str(sample_num)+'_noisy.wav', 16000, noisy_speech)
