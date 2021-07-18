@@ -293,6 +293,25 @@ class ComplexConv2d(nn.Module):
         return out
 
 
+class ConvTranspose2d(nn.Conv2d):
+    def forward(self, x):
+        if self.padding_mode != 'zeros':
+            raise ValueError('Only `zeros` padding mode is supported for ConvTranspose2d')
+
+        output_padding = self._output_padding(
+            x, output_size, self.stride, self.padding, self.kernel_size, self.dilation)  # type: ignore[arg-type]
+
+        weight = self.weight
+        weight_mean = weight.mean(dim=1, keepdim=True).mean(dim=2,
+                                                            keepdim=True).mean(dim=3, keepdim=True)
+        weight = weight - weight_mean
+        std = weight.view(weight.size(0), -1).std(dim=1).view(-1, 1, 1, 1) + 1e-5
+        weight = weight / std.expand_as(weight)
+
+        return F.conv_transpose2d(x, weight, self.bias, self.stride, self.padding,
+                                  output_padding, self.groups, self.dilation)
+    
+    
 class ComplexConvTranspose2d(nn.Module):
 
     def __init__(
