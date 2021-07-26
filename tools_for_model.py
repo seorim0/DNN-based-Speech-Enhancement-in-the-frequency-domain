@@ -194,6 +194,28 @@ def complex_cat(inputs, axis):
 ############################################################################
 #                         for data normalization                           #
 ############################################################################
+class GroupNorm2d(nn.Module):
+    def __init__(self, c_num, group_num=32, eps=1e-10):
+        super(GroupNorm2d, self).__init__()
+        self.group_num = group_num  # 전체 채널을 나눌 그룹 숫자입니다.
+        self.gamma = nn.Parameter(torch.ones(c_num, 1, 1))  # 학습가능한 파라메터 gamma
+        self.beta = nn.Parameter(torch.zeros(c_num, 1, 1))  # 학습가능한 파레메터 beta
+        self.eps = eps  # 0방지
+
+    def forward(self, x):
+        N, C, H, W = x.size()
+
+        x = x.view(N, self.group_num, -1)  # 그룹으로 묶고
+
+        mean = x.mean(dim=2, keepdim=True)  # 평균
+        std = x.std(dim=2, keepdim=True)  # 표준편차
+
+        x = (x - mean) / (std + self.eps)
+        x = x.view(N, C, H, W)  # 원래대로 돌리기.
+
+        return x * self.gamma + self.beta
+    
+
 class Conv2d(nn.Conv2d):
     def __init__(self, in_channels, out_channels, kernel_size, stride=1,
                  padding=0, dilation=1, groups=1, bias=True):
