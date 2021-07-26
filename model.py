@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from tools_for_model import ConvSTFT, ConviSTFT, \
-    ComplexConv2d, ComplexConvTranspose2d, NavieComplexLSTM, complex_cat, ComplexBatchNorm, GroupNorm2d
+    ComplexConv2d, ComplexConvTranspose2d, NavieComplexLSTM, complex_cat, ComplexBatchNorm, LayerNorm, GroupNorm2d
 import config as cfg
 from tools_for_loss import sdr, sdr_linear, si_sdr, si_snr, get_array_lms_loss, pmsqe_stft, pmsqe, get_pam_loss
 from asteroid_filterbanks import transforms
@@ -70,6 +70,8 @@ class complex_model(nn.Module):
                         padding=(2, 1)
                     ),
                     # GroupNorm2d(self.kernel_num[idx + 1]) if not use_cbn else ComplexBatchNorm(
+                    #LayerNorm(self.kernel_num[idx + 1]) if not use_cbn else ComplexBatchNorm(
+                    # nn.InstanceNorm2d(self.kernel_num[idx + 1]) if not use_cbn else ComplexBatchNorm(
                     nn.BatchNorm2d(self.kernel_num[idx + 1]) if not use_cbn else ComplexBatchNorm(
                         self.kernel_num[idx + 1]),
                     nn.PReLU()
@@ -114,7 +116,9 @@ class complex_model(nn.Module):
                                 padding=(2, 0),
                                 output_padding=(1, 0)
                             ),
-                            # GroupNorm2d(self.kernel_num[idx + 1]) if not use_cbn else ComplexBatchNorm(
+                            # GroupNorm2d(self.kernel_num[idx - 1]) if not use_cbn else ComplexBatchNorm(
+                            #LayerNorm(self.kernel_num[idx - 1]) if not use_cbn else ComplexBatchNorm(
+                            # nn.InstanceNorm2d(self.kernel_num[idx - 1]) if not use_cbn else ComplexBatchNorm(
                             nn.BatchNorm2d(self.kernel_num[idx - 1]) if not use_cbn else ComplexBatchNorm(
                                 self.kernel_num[idx - 1]),
                             # nn.ELU()
