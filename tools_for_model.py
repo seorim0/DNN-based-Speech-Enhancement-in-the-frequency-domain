@@ -337,8 +337,8 @@ class ComplexConv2d(nn.Module):
         return out
 
 
-class ConvTranspose2d(nn.Conv2d):
-    def forward(self, x):
+class ConvTranspose2d(nn.ConvTranspose2d):
+    def forward(self, x, output_size=None):
         if self.padding_mode != 'zeros':
             raise ValueError('Only `zeros` padding mode is supported for ConvTranspose2d')
 
