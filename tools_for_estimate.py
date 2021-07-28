@@ -86,3 +86,33 @@ def cal_stoi(estimated_speechs, clean_speechs):
         stoi_score = stoi(clean_speechs[i], estimated_speechs[i], cfg.fs, extended=False)
         stoi_scores.append(stoi_score)
     return stoi_scores
+
+
+###############################################################################
+#                                     SNR                                     #
+###############################################################################
+def cal_snr(s1, s2, eps=1e-8):
+    signal = s2
+    mean_signal = np.mean(signal)
+    signal_diff = signal - mean_signal
+    var_signal = np.sum(np.mean(signal_diff ** 2))  # # variance of orignal data
+
+    noisy_signal = s1
+    noise = noisy_signal - signal
+    mean_noise = np.mean(noise)
+    noise_diff = noise - mean_noise
+    var_noise = np.sum(np.mean(noise_diff ** 2))  # # variance of noise
+
+    if var_noise == 0:
+        snr_score = 100  # # clean
+    else:
+        snr_score = (np.log10(var_signal/var_noise + eps))*10
+    return snr_score
+
+
+def cal_snr_array(estimated_speechs, clean_speechs):
+    snr_score = []
+    for i in range(len(estimated_speechs)):
+        snr = cal_snr(estimated_speechs[i], clean_speechs[i])
+        snr_score.append(snr)
+    return snr_score
