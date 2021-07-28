@@ -27,74 +27,77 @@ def model_test(model, validation_loader, noise_type, snr, dir_to_save, direct, e
 
     # for record the score each samples
     f_score = open(dir_to_save + '/Epoch_{}_SCORES'.format(epoch), 'a')
-    for inputs, targets in tools.Bar(validation_loader):
-        batch_num += 1
+    
+    model.eval()
+    with torch.no_grad():
+        for inputs, targets in tools.Bar(validation_loader):
+            batch_num += 1
 
-        # to cuda
-        inputs = inputs.float().to(DEVICE)
-        targets = targets.float().to(DEVICE)
+            # to cuda
+            inputs = inputs.float().to(DEVICE)
+            targets = targets.float().to(DEVICE)
 
-        _, _, outputs = model(inputs, direct_mapping=direct)
+            _, _, outputs = model(inputs, direct_mapping=direct)
 
-        # estimate the output speech with pesq and stoi
-        estimated_wavs = outputs.cpu().detach().numpy()
-        clean_wavs = targets.cpu().detach().numpy()
-        noisy_wavs = inputs.cpu().detach().numpy()
+            # estimate the output speech with pesq and stoi
+            estimated_wavs = outputs.cpu().detach().numpy()
+            clean_wavs = targets.cpu().detach().numpy()
+            noisy_wavs = inputs.cpu().detach().numpy()
 
-        pesq = cal_pesq(estimated_wavs, clean_wavs)
-        noisy_pesq = cal_pesq(noisy_wavs, clean_wavs)
-        if len(estimated_wavs[0]) > len(clean_wavs[0]):   # why?
-            estimated_wavs[0] = estimated_wavs[:,:len(clean_wavs[0])]
-        else:
-            clean_wavs = clean_wavs[:,:len(estimated_wavs[0])]
-        stoi = cal_stoi(estimated_wavs, clean_wavs)
+            pesq = cal_pesq(estimated_wavs, clean_wavs)
+            noisy_pesq = cal_pesq(noisy_wavs, clean_wavs)
+            if len(estimated_wavs[0]) > len(clean_wavs[0]):   # why?
+                estimated_wavs[0] = estimated_wavs[:,:len(clean_wavs[0])]
+            else:
+                clean_wavs = clean_wavs[:,:len(estimated_wavs[0])]
+            stoi = cal_stoi(estimated_wavs, clean_wavs)
 
-        # reshape for sum
-        pesq = np.reshape(pesq, (1, -1))
-        stoi = np.reshape(stoi, (1, -1))
+            # reshape for sum
+            pesq = np.reshape(pesq, (1, -1))
+            stoi = np.reshape(stoi, (1, -1))
 
-        noisy_pesq = np.reshape(noisy_pesq, (1, -1))
+            noisy_pesq = np.reshape(noisy_pesq, (1, -1))
 
-        # all batch data array
-        all_batch_input.extend(inputs.cpu().detach().numpy())
-        all_batch_target.extend(targets.cpu().detach().numpy())
-        all_batch_output.extend(outputs.cpu().detach().numpy())
-        all_batch_pesq.extend(pesq[0])
-        all_batch_stoi.extend(stoi[0])
+            # all batch data array
+            all_batch_input.extend(inputs.cpu().detach().numpy())
+            all_batch_target.extend(targets.cpu().detach().numpy())
+            all_batch_output.extend(outputs.cpu().detach().numpy())
+            all_batch_pesq.extend(pesq[0])
+            all_batch_stoi.extend(stoi[0])
 
-        all_batch_noisy_pesq.extend(noisy_pesq[0])
+            all_batch_noisy_pesq.extend(noisy_pesq[0])
 
-        avg_pesq += sum(pesq[0]) / len(inputs)
-        avg_stoi += sum(stoi[0]) / len(inputs)
+            avg_pesq += sum(pesq[0]) / len(inputs)
+            avg_stoi += sum(stoi[0]) / len(inputs)
 
-    estfile_path = './output/{}/{}dB/'.format(noise_type, snr)
-    for m in range(len(all_batch_output)):
-        est_file_name = '{}dB_{}_{}_est_{:.5}.wav'.format(snr, m + 1, cfg.expr_num, all_batch_pesq[m])
+        estfile_path = './output/{}/{}dB/'.format(noise_type, snr)
+        for m in range(len(all_batch_output)):
+            est_file_name = '{}dB_{}_{}_est_{:.5}.wav'.format(snr, m + 1, cfg.expr_num, all_batch_pesq[m])
 
-        est_wav = all_batch_output[m]
-        wav_write(estfile_path+est_file_name, cfg.fs, est_wav)
+            est_wav = all_batch_output[m]
+            wav_write(estfile_path+est_file_name, cfg.fs, est_wav)
 
-        noisy_file_name = '{}dB_{}_noisy_{:.5}.wav'.format(snr, m + 1, all_batch_noisy_pesq[m])
-        noisy_wav = all_batch_input[m]
-        wav_write(estfile_path+noisy_file_name, cfg.fs, noisy_wav)
+            noisy_file_name = '{}dB_{}_noisy_{:.5}.wav'.format(snr, m + 1, all_batch_noisy_pesq[m])
+            noisy_wav = all_batch_input[m]
+            wav_write(estfile_path+noisy_file_name, cfg.fs, noisy_wav)
 
-        clean_file_name = '{}dB_{}_clean.wav'.format(snr, m + 1)
-        clean_wav = all_batch_target[m]
-        wav_write(estfile_path+clean_file_name, cfg.fs, clean_wav)
+            clean_file_name = '{}dB_{}_clean.wav'.format(snr, m + 1)
+            clean_wav = all_batch_target[m]
+            wav_write(estfile_path+clean_file_name, cfg.fs, clean_wav)
 
-        CSIG, CBAK, CVOL, _ = composite(estfile_path+clean_file_name, estfile_path+est_file_name)
-        avg_csig += CSIG
-        avg_cbak += CBAK
-        avg_cvol += CVOL
+            CSIG, CBAK, CVOL, _ = composite(estfile_path+clean_file_name, estfile_path+est_file_name)
+            avg_csig += CSIG
+            avg_cbak += CBAK
+            avg_cvol += CVOL
 
-        # pesq: 0.1 better / stoi: 0.01 better
-        f_score.write('PESQ {:.6f} | STOI {:.6f} | CSIG {:.6f} | CBAK {:.6f} | CVOL {:.6f}\n'
-                          .format(all_batch_pesq[m], all_batch_stoi[m], CSIG, CBAK, CVOL))
+            # pesq: 0.1 better / stoi: 0.01 better
+            f_score.write('PESQ {:.6f} | STOI {:.6f} | CSIG {:.6f} | CBAK {:.6f} | CVOL {:.6f}\n'
+                              .format(all_batch_pesq[m], all_batch_stoi[m], CSIG, CBAK, CVOL))
 
-    avg_pesq /= batch_num
-    avg_stoi /= batch_num
-    avg_csig /= batch_num
-    avg_cbak /= batch_num
-    avg_cvol /= batch_num
-    f_score.close()
+        avg_pesq /= batch_num
+        avg_stoi /= batch_num
+        avg_csig /= batch_num
+        avg_cbak /= batch_num
+        avg_cvol /= batch_num
+        f_score.close()
     return avg_pesq, avg_stoi, avg_csig, avg_cbak, avg_cvol
