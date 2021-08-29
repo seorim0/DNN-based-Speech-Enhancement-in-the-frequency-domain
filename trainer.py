@@ -344,7 +344,7 @@ def model_direct_train(model, optimizer, train_loader, DEVICE):
             return train_loss  ##
 
 
-def model_conditional_train(model, optimizer, train_loader, direct, DEVICE):
+def model_mid_train(model, optimizer, train_loader, direct, DEVICE):
     # initialization
     train_loss = 0
     batch_num = 0
@@ -373,6 +373,50 @@ def model_conditional_train(model, optimizer, train_loader, direct, DEVICE):
     train_loss /= batch_num
 
     return train_loss
+
+
+def model_conditional_train(model, optimizer, train_loader, direct, DEVICE):
+    # initialization
+    train_loss = 0
+    train_main_loss = 0
+    train_sub_loss = 0
+    batch_num = 0
+
+    # train
+    model.train()
+    for conditions, inputs, targets in tools.Bar(train_loader):
+        batch_num += 1
+
+        # to cuda
+        conditions = conditions.float().to(DEVICE)
+        inputs = inputs.float().to(DEVICE)
+        targets = targets.float().to(DEVICE)
+
+        _, _, outputs = model(inputs, direct_mapping=direct)
+
+        main_loss = model.loss(outputs, targets)
+        sub_loss = model.loss(outputs, conditions)
+
+        r1 = 10
+        r2 = 1
+        r = r1 + r2
+        loss = (r1 * main_loss + r2 * sub_loss) / r
+
+        # if you want to check the scale of the loss
+        # print('Main loss: {:.4} | Sub loss: {:.4}'.format(r1 * main_loss, r2 * sub_loss))
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        train_loss += loss
+        train_main_loss += r1 * main_loss
+        train_sub_loss += r2 * sub_loss
+    train_loss /= batch_num
+    train_main_loss /= batch_num
+    train_sub_loss /= batch_num
+
+    return train_loss, train_main_loss, train_sub_loss
 
 
 def cycle_model_train(N2C, C2N, optimizer, train_loader, direct, DEVICE):
@@ -1037,6 +1081,95 @@ def model_direct_validate(model, validation_loader, writer, dir_to_save, epoch, 
                 return validation_loss, avg_pesq, avg_stoi
 
 
+def model_conditional_validate(model, validation_loader, direct, writer, dir_to_save, epoch, DEVICE):
+    # initialization
+    validation_loss = 0
+    validation_main_loss = 0
+    validation_sub_loss = 0
+    batch_num = 0
+
+    avg_pesq = 0
+    avg_stoi = 0
+
+    all_batch_input = []
+    all_batch_target = []
+    all_batch_output = []
+
+    # save the same sample
+    clip_num = 10
+
+    # for record the score each samples
+    f_score = open(dir_to_save + '/Epoch_' + '%d_SCORES' % epoch, 'a')
+
+    model.eval()
+    with torch.no_grad():
+        for inputs, targets in tools.Bar(validation_loader):
+            batch_num += 1
+
+            # to cuda
+            inputs = inputs.float().to(DEVICE)
+            targets = targets.float().to(DEVICE)
+
+            # _, _, outputs = model(inputs, direct_mapping=direct)
+            # conditions = conditions.float().to(DEVICE)
+            # inputs = inputs.float().to(DEVICE)
+            # targets = targets.float().to(DEVICE)
+
+            _, _, outputs = model(inputs, direct_mapping=direct)
+
+            # main_loss = model.loss(outputs, targets)
+            # sub_loss = model.loss(outputs, conditions)
+
+            # r1 = 10
+            # r2 = 2
+            # r = r1 + r2
+            # loss = (r1 * main_loss + r2 * sub_loss) / r
+            loss = model.loss(outputs, targets)
+            validation_loss += loss
+            # validation_main_loss += r1 * main_loss
+            # validation_sub_loss += r2 * sub_loss
+
+            # estimate the output speech with pesq and stoi
+            estimated_wavs = outputs.cpu().detach().numpy()
+            clean_wavs = targets.cpu().detach().numpy()
+
+            pesq = cal_pesq(estimated_wavs, clean_wavs)
+            stoi = cal_stoi(estimated_wavs, clean_wavs)
+
+            # pesq: 0.1 better / stoi: 0.01 better
+            for i in range(len(pesq)):
+                f_score.write('PESQ {:.6f} | STOI {:.6f}\n'.format(pesq[i], stoi[i]))
+
+            # reshape for sum
+            pesq = np.reshape(pesq, (1, -1))
+            stoi = np.reshape(stoi, (1, -1))
+
+            avg_pesq += sum(pesq[0]) / len(inputs)
+            avg_stoi += sum(stoi[0]) / len(inputs)
+
+            # for saving the sample we want to tensorboard
+            if epoch % 10 == 0:
+                # all batch data array
+                all_batch_input.extend(inputs)
+                all_batch_target.extend(targets)
+                all_batch_output.extend(outputs)
+
+        # save the samples to tensorboard
+        if epoch % 10 == 0:
+            writer.save_samples_we_want('clip: ' + str(clip_num), all_batch_input[clip_num],
+                                        all_batch_target[clip_num],
+                                        all_batch_output[clip_num], epoch)
+
+        validation_loss /= batch_num
+        # validation_main_loss /= batch_num
+        # validation_sub_loss /= batch_num
+        avg_pesq /= batch_num
+        avg_stoi /= batch_num
+
+        # return validation_loss, validation_main_loss, validation_sub_loss, avg_pesq, avg_stoi
+        return validation_loss, avg_pesq, avg_stoi
+    
+    
 def cycle_model_validate(N2C, C2N, validation_loader, direct, writer, epoch, DEVICE):
     # initialization
     validation_loss = 0
