@@ -266,6 +266,88 @@ elif cfg.latent_vector_loss:
         #     writer.log_score(vali_pesq, vali_stoi, epoch)
         #     print('          | V PESQ: {:.6f} | STOI: {:.6f} '.format(vali_pesq, vali_stoi))
         #     fp.write('          | V PESQ: {:.6f} | STOI: {:.6f} \n'.format(vali_pesq, vali_stoi))
+        
+elif cfg.conditional_learning:
+    for epoch in range(epoch_start_idx, cfg.max_epochs):
+        start_time = time.time()
+        # Training
+        if cfg.perceptual != 'False':  # The case of using perceptual loss function
+            train_loss, train_main_loss, train_perceptual_loss = \
+                model_train(model, optimizer, train_loader, direct, DEVICE)
+        else:
+            train_loss, train_main_loss, train_sub_loss = \
+                model_conditional_train(model, optimizer, train_loader, direct, DEVICE)
+
+        # save checkpoint file to resume training
+        save_path = str(dir_to_save + '/' + ('chkpt_%d.pt' % epoch))
+        torch.save({
+            'model': model.state_dict(),
+            'optimizer': optimizer.state_dict(),
+            'epoch': epoch
+        }, save_path)
+
+        # Validation
+        if cfg.perceptual != 'False':  # The case of using perceptual loss function
+            vali_loss, vali_main_loss, vali_perceptual_loss, vali_pesq, vali_stoi = \
+                model_validate(model, validation_loader, direct, writer, dir_to_save, epoch, DEVICE)
+            # write the loss on tensorboard
+            writer.log_loss(train_loss, vali_loss, epoch)
+            writer.log_perceptual_loss(train_main_loss, train_perceptual_loss,
+                                       vali_main_loss, vali_perceptual_loss, epoch)
+            writer.log_score(vali_pesq, vali_stoi, epoch)
+
+            print('Epoch [{}] | T {:.6f} | V {:.6} takes {:.2f} seconds\n'
+                  .format(epoch, train_loss, vali_loss, time.time() - start_time))
+            print('             main loss: T {:.6f} V {:.6f} | perceptual loss: T {:.6f} V {:.6f}'
+                  .format(train_main_loss, vali_main_loss, train_perceptual_loss, vali_perceptual_loss))
+            print('          | V PESQ: {:.6f} | STOI: {:.6f} '.format(vali_pesq, vali_stoi))
+            # log file save
+            fp.write('Epoch [{}] | T {:.6f} | V {:.6} takes {:.2f} seconds\n'
+                     .format(epoch, train_loss, vali_loss, time.time() - start_time))
+            fp.write('             main loss: T {:.6f} V {:.6f} | perceptual loss: T {:.6f} V {:.6f}'
+                     .format(train_main_loss, vali_main_loss, train_perceptual_loss, vali_perceptual_loss))
+            fp.write('          | V PESQ: {:.6f} | STOI: {:.6f} \n'.format(vali_pesq, vali_stoi))
+        else:
+            # vali_loss, vali_main_loss, vali_sub_loss, vali_pesq, vali_stoi = \
+            #     model_conditional_validate(model, validation_loader, direct, writer, dir_to_save, epoch, DEVICE)
+            vali_loss, vali_pesq, vali_stoi = \
+                model_conditional_validate(model, validation_loader, direct, writer, dir_to_save, epoch, DEVICE)
+            # write the loss on tensorboard
+            # writer.log_conditional_loss(train_loss, vali_loss, train_main_loss, vali_main_loss, train_sub_loss, vali_sub_loss, epoch)
+            writer.log_conditional_loss(train_loss, vali_loss, train_main_loss, train_sub_loss, epoch)
+            writer.log_score(vali_pesq, vali_stoi, epoch)
+
+            print('Epoch [{}] | T {:.6f} | V {:.6} takes {:.2f} seconds\n'
+                  .format(epoch, train_loss, vali_loss, time.time() - start_time))
+            # print('             main loss: T {:.6f} V {:.6f} | sub loss: T {:.6f} V {:.6f}'
+            #       .format(train_main_loss, vali_main_loss, train_sub_loss, vali_sub_loss))
+            # print('             main loss: T {:.6f} V {:.6f} | sub loss: T {:.6f}'
+            #       .format(train_main_loss, vali_main_loss, train_sub_loss))
+            print('             main loss: T {:.6f} | sub loss: T {:.6f}'
+                  .format(train_main_loss, train_sub_loss))
+            print('          | V PESQ: {:.6f} | STOI: {:.6f} '.format(vali_pesq, vali_stoi))
+            # log file save
+            fp.write('Epoch [{}] | T {:.6f} | V {:.6} takes {:.2f} seconds\n'
+                     .format(epoch, train_loss, vali_loss, time.time() - start_time))
+            # fp.write('             main loss: T {:.6f} V {:.6f} | sub loss: T {:.6f} V {:.6f}'
+            #          .format(train_main_loss, vali_main_loss, train_sub_loss, vali_sub_loss))
+            # fp.write('             main loss: T {:.6f} V {:.6f} | sub loss: T {:.6f}'
+            #          .format(train_main_loss, vali_main_loss, train_sub_loss))
+            fp.write('             main loss: T {:.6f} | sub loss: T {:.6f}'
+                     .format(train_main_loss, train_sub_loss))
+            fp.write('          | V PESQ: {:.6f} | STOI: {:.6f} \n'.format(vali_pesq, vali_stoi))
+
+        mse_vali_total[epoch - 1] = vali_loss
+        np.save(str(dir_to_save + '/mse_vali_total.npy'), mse_vali_total)
+
+        # # It takes quite some time to evaluate the scores for each epoch, so you can control the frequency
+        # if epoch % 1 == 0:
+        #     vali_pesq, vali_stoi = model_eval(model, validation_loader, direct, dir_to_save, epoch, DEVICE)
+        #     # write the loss on tensorboard per 5 epochs
+        #     writer.log_score(vali_pesq, vali_stoi, epoch)
+        #     print('          | V PESQ: {:.6f} | STOI: {:.6f} '.format(vali_pesq, vali_stoi))
+        #     fp.write('          | V PESQ: {:.6f} | STOI: {:.6f} \n'.format(vali_pesq, vali_stoi))
+        
 elif direct:
     for epoch in range(epoch_start_idx, cfg.max_epochs):
         start_time = time.time()
