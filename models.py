@@ -310,7 +310,6 @@ class DCCRN(nn.Module):
             if cfg.perceptual == 'LMS':
                 return get_array_lms_loss(clean_mags, est_clean_mags)
             elif cfg.perceptual == 'PMSQE':
-                get_array_pmsqe_loss(clean_mags, est_clean_mags)
                 return get_array_pmsqe_loss(clean_mags, est_clean_mags)
         else:
             if cfg.loss == 'MSE':
