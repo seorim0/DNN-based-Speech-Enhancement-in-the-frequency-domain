@@ -63,7 +63,7 @@ You can simply train the CRN with the colab file.
 
 
 ## Tensorboard
-> As shown below, you can check whether the network is being trained well in real time through 'write_on_tensorboard.py'.   
+> As shown below, you can check whether the network is being trained well in real time through ['write_on_tensorboard.py'](https://github.com/seorim0/Speech_enhancement_for_you/blob/main/write_on_tensorboard.py).   
 
 ![tensor](https://user-images.githubusercontent.com/55497506/131444707-4459a979-8652-46f4-82f1-0c640cfff685.png)   
 * loss
