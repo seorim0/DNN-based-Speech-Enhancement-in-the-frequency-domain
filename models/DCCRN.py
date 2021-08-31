@@ -217,11 +217,15 @@ class DCCRN(nn.Module):
 
         if self.masking_mode == 'Direct(None make)': 
             # for loss calculation
-            target_mags, _ = self.stft(target)
+            target_specs = self.stft(inputs)
+            target_real = target_specs[:, :self.fft_len // 2 + 1]
+            target_imag = target_specs[:, self.fft_len // 2 + 1:]
             
             # spectral mapping
-            out_real = out * torch.cos(phase)  # use noisy phase
-            out_imag = out * torch.sin(phase)
+            out_real = out[:, 0]
+            out_imag = out[:, 1]
+            out_real = F.pad(out_real, [0, 0, 1, 0])
+            out_imag = F.pad(out_imag, [0, 0, 1, 0])
 
             out_spec = torch.cat([out_real, out_imag], 1)
 
@@ -229,7 +233,7 @@ class DCCRN(nn.Module):
             out_wav = torch.squeeze(out_wav, 1)
             out_wav = torch.clamp_(out_wav, -1, 1)
 
-            return out, target_mags, out_wav
+            return out_real, out_imag, target_real, target_imag, out_wav
         else:
             #    print('decoder', out.size())
             mask_real = out[:, 0]
