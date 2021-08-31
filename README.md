@@ -29,6 +29,9 @@ The results of the network can be evaluated through various objective metrics (P
 > As shown below, you can check whether the network is being trained well in real time through 'write_on_tensorboard.py'.   
 
 ![tensor](https://user-images.githubusercontent.com/55497506/131444707-4459a979-8652-46f4-82f1-0c640cfff685.png)   
+* loss
+* pesq, stoi
+* spectrogram
 
 ## Requirements
 > This repository is tested on Ubuntu 20.04.
