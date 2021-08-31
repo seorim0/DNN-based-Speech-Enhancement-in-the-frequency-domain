@@ -39,6 +39,10 @@ The results of the network can be evaluated through various objective metrics (P
 
 ## Getting Started   
 
+## Tutorials
+'SE_tutorials.ipynb' was made for tutorial.   
+You can simply train the CRN with the colab file.   
+
 
 <!-- NETWORKS -->
 ## Networks   
@@ -72,10 +76,7 @@ The results of the network can be evaluated through various objective metrics (P
 * loss
 * pesq, stoi
 * spectrogram
-
-## Tutorials
-'SE_tutorials.ipynb' was made for tutorial.   
-You can simply train the CRN with the colab file.   
+  
 
 ## Reference   
 https://github.com/huyanxin/DeepComplexCRN   
