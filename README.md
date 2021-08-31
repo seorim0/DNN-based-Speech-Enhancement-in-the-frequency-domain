@@ -3,7 +3,24 @@ You can do DNN-based speech enhancement(SE) using various method through this re
 First, you have to make noisy data by mixing clean speech and noise. The dataset is used for deep learning training.   
 And, you can adjust the type of the network and configuration in various ways, as shown below.   
 The results of the network can be evaluated through various objective metrics (PESQ, STOI, CSIG, CBAK, COVL).
-   
+
+
+
+<!-- You can change -->
+<details open="open">
+  <summary>You can change</summary>
+  <ol>
+    <li>
+      <a href="#Networks">About The Project</a>
+    </li>
+    <li>
+      <a href="#Learning methods">Getting Started</a>
+    </li>
+    <li><a href="#Loss functions">Usage</a></li>
+  </ol>
+</details>
+
+
 ## Networks   
 > You can find a list that you can adjust in various ways at config.py, and they are:   
 * Real network   
