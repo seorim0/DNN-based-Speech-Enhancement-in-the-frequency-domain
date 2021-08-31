@@ -1,5 +1,5 @@
-# Speech enhancement with Pytorch
-You can do DNN-based speech enhancement(SE) using various method through this repository.   
+# Speech Enhancement with Pytorch
+You can do DNN-based speech enhancement(SE) in the frequency domain using various method through this repository.   
 First, you have to make noisy data by mixing clean speech and noise. The dataset is used for deep learning training.   
 And, you can adjust the type of the network and configuration in various ways, as shown below.   
 The results of the network can be evaluated through various objective metrics (PESQ, STOI, CSIG, CBAK, COVL).
@@ -21,6 +21,25 @@ The results of the network can be evaluated through various objective metrics (P
 </details>
 
 
+## Requirements
+> This repository is tested on Ubuntu 20.04, and
+* Python 3.7
+* Cuda 11.1
+* CuDNN 8.0.5
+* Pytorch 1.9.0
+<br>
+
+> Library
+* tqdm
+* asteroid   
+* scipy   
+* matplotlib   
+* tensorboardX    
+
+
+## Getting Started   
+
+
 <!-- NETWORKS -->
 ## Networks   
 > You can find a list that you can adjust in various ways at config.py, and they are:   
@@ -30,12 +49,12 @@ The results of the network can be evaluated through various objective metrics (P
    - deep complex convolutional recurrent network (DCCRN) [[1]](https://arxiv.org/abs/2008.00264)  
 
 <!-- LEARNING METHODS -->
-## Learning methods
+## Learning Methods
 * T-F masking
 * Spectral mapping
 
 <!-- LOSS FUNCTIONS -->
-## Loss functions   
+## Loss Functions   
 * MSE   
 * SDR   
 * SI-SNR   
@@ -45,6 +64,7 @@ The results of the network can be evaluated through various objective metrics (P
 * LMS
 * PMSQE
 
+
 ## Tensorboard
 > As shown below, you can check whether the network is being trained well in real time through 'write_on_tensorboard.py'.   
 
@@ -52,21 +72,6 @@ The results of the network can be evaluated through various objective metrics (P
 * loss
 * pesq, stoi
 * spectrogram
-
-## Requirements
-> This repository is tested on Ubuntu 20.04.
-* Python 3.7+
-* Cuda 11.1+
-* CuDNN 8+
-* Pytorch 1.9+
-<br>
-
-> Library
-* tqdm
-* asteroid   
-* scipy   
-* matplotlib   
-* tensorboardX   
 
 ## Tutorials
 'SE_tutorials.ipynb' was made for tutorial.   
