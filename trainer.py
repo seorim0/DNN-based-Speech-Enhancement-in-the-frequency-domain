@@ -272,7 +272,7 @@ def model_perceptual_validate(model, validation_loader, writer, dir_to_save, epo
         avg_pesq /= batch_num
         avg_stoi /= batch_num
 
-        return validation_loss, avg_pesq, avg_stoi
+        return validation_loss, validation_main_loss, validation_perceptual_loss, avg_pesq, avg_stoi
 
 
 # Spectral mapping
