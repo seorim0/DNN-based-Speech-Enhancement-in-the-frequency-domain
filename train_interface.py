@@ -168,14 +168,14 @@ if cfg.perceptual is not False:  # train with perceptual loss function
 
         print('Epoch [{}] | T {:.6f} | V {:.6} '
               .format(epoch, train_loss, vali_loss))
-        print('           | T {:.6f} {:.6f} | V {:.6} {:.6f} takes {:.2f} seconds\n'
+        print('          | T {:.6f} {:.6f} | V {:.6} {:.6f} takes {:.2f} seconds\n'
               .format(epoch, train_main_loss, train_perceptual_loss, validation_main_loss, validation_perceptual_loss,
                       time.time() - start_time))
         print('          | V PESQ: {:.6f} | STOI: {:.6f} '.format(vali_pesq, vali_stoi))
         # log file save
         fp.write('Epoch [{}] | T {:.6f} | V {:.6}\n'
                  .format(epoch, train_loss, vali_loss))
-        fp.write('           | T {:.6f} {:.6f} | V {:.6} {:.6f} takes {:.2f} seconds\n'
+        fp.write('          | T {:.6f} {:.6f} | V {:.6} {:.6f} takes {:.2f} seconds\n'
                  .format(epoch, train_main_loss, train_perceptual_loss,
                          validation_main_loss, validation_perceptual_loss, time.time() - start_time))
         fp.write('          | V PESQ: {:.6f} | STOI: {:.6f} \n'.format(vali_pesq, vali_stoi))
