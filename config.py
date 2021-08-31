@@ -21,7 +21,7 @@ if chkpt_model is not None:
 # the list you can do
 model_list = ['DCCRN', 'CRN']
 loss_list = ['MSE', 'SDR', 'SI-SNR', 'SI-SDR']
-perceptual_list = ['False', 'LMS', 'PMSQE']
+perceptual_list = [False, 'LMS', 'PMSQE']
 lstm_type = ['real', 'complex']
 mask_type = ['Direct(None make)', 'E', 'C', 'R']
 window_type = ['hanning']
