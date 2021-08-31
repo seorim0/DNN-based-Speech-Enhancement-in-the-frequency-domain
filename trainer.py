@@ -61,8 +61,6 @@ def model_perceptual_train(model, optimizer, train_loader, DEVICE):
         inputs = inputs.float().to(DEVICE)
         targets = targets.float().to(DEVICE)
 
-        if 
-        .masking_mode
         real_spec, img_spec, outputs = model(inputs)
         main_loss = model.loss(outputs, targets)
         perceptual_loss = model.loss(outputs, targets, real_spec, img_spec, perceptual=True)
