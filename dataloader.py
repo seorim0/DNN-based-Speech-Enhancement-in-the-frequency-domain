@@ -3,7 +3,7 @@ import numpy as np
 from torch.utils.data import Dataset, DataLoader
 import config as cfg
 
-# If you don't set the data type to object when saving the data... 
+# # If you don't set the data type to object when saving the data... 
 # np_load_old = np.load
 # np.load = lambda *a, **k: np_load_old(*a, allow_pickle=True, **k)
 
