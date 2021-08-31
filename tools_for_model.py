@@ -1,4 +1,3 @@
-import os
 import torch
 import torch.nn as nn
 import numpy as np
@@ -6,13 +5,12 @@ import time
 import torch.nn.functional as F
 from scipy.signal import get_window
 import matplotlib.pylab as plt
-from config import win_len, win_inc, fft_len, window, DEVICE
-import scipy.io.wavfile as wav
 
 
 ############################################################################
 #                         for convolutional STFT                           #
 ############################################################################
+# this is from conv_stft https://github.com/huyanxin/DeepComplexCRN
 def init_kernels(win_len, win_inc, fft_len, win_type=None, invers=False):
     if win_type == 'None' or win_type is None:
         window = np.ones(win_len)
@@ -83,7 +81,6 @@ class ConviSTFT(nn.Module):
         self.win_type = win_type
         self.win_len = win_len
         self.stride = win_inc
-        self.stride = win_inc
         self.dim = self.fft_len
         self.register_buffer('window', window)
         self.register_buffer('enframe', torch.eye(win_len)[:, None, :])
@@ -98,13 +95,16 @@ class ConviSTFT(nn.Module):
             real = inputs * torch.cos(phase)
             imag = inputs * torch.sin(phase)
             inputs = torch.cat([real, imag], 1)
+
         outputs = F.conv_transpose1d(inputs, self.weight, stride=self.stride)
 
         # this is from torch-stft: https://github.com/pseeth/torch-stft
         t = self.window.repeat(1, 1, inputs.size(-1)) ** 2
         coff = F.conv_transpose1d(t, self.enframe, stride=self.stride)
+
         outputs = outputs / (coff + 1e-8)
-        # outputs = torch.where(coff == 0, outputs, outputs/coff)
+
+        # # outputs = torch.where(coff == 0, outputs, outputs/coff)
         outputs = outputs[..., self.win_len - self.stride:-(self.win_len - self.stride)]
 
         return outputs
@@ -182,10 +182,10 @@ class NavieComplexLSTM(nn.Module):
 def complex_cat(inputs, axis):
     real, imag = [], []
     for idx, data in enumerate(inputs):
-        r, i = torch.chunk(data, 2, axis)  # x = torch.chunk(x, n, dim)  >> x의 dim 차원을 n개씩 잘라서 뽑아옴
+        r, i = torch.chunk(data, 2, axis)
         real.append(r)
         imag.append(i)
-    real = torch.cat(real, axis)  # torch.cat : 차원 늘리기
+    real = torch.cat(real, axis)
     imag = torch.cat(imag, axis)
     outputs = torch.cat([real, imag], axis)
     return outputs
@@ -194,67 +194,6 @@ def complex_cat(inputs, axis):
 ############################################################################
 #                         for data normalization                           #
 ############################################################################
-class LayerNorm(nn.Module):
-    def __init__(self, c_num, group_num=1, eps=1e-10):
-        super(LayerNorm, self).__init__()
-        self.group_num = group_num  # 전체 채널을 나눌 그룹 숫자입니다.
-        self.gamma = nn.Parameter(torch.ones(c_num, 1, 1))  # 학습가능한 파라메터 gamma
-        self.beta = nn.Parameter(torch.zeros(c_num, 1, 1))  # 학습가능한 파레메터 beta
-        self.eps = eps  # 0방지
-
-    def forward(self, x):
-        N, C, H, W = x.size()
-
-        x = x.view(N, self.group_num, -1)  # 그룹으로 묶고
-
-        mean = x.mean(dim=2, keepdim=True)  # 평균
-        std = x.std(dim=2, keepdim=True)  # 표준편차
-
-        x = (x - mean) / (std + self.eps)
-        x = x.view(N, C, H, W)  # 원래대로 돌리기.
-
-        return x * self.gamma + self.beta
-    
-    
-class GroupNorm2d(nn.Module):
-    def __init__(self, c_num, group_num=32, eps=1e-10):
-        super(GroupNorm2d, self).__init__()
-        self.group_num = group_num  # 전체 채널을 나눌 그룹 숫자입니다.
-        self.gamma = nn.Parameter(torch.ones(c_num, 1, 1))  # 학습가능한 파라메터 gamma
-        self.beta = nn.Parameter(torch.zeros(c_num, 1, 1))  # 학습가능한 파레메터 beta
-        self.eps = eps  # 0방지
-
-    def forward(self, x):
-        N, C, H, W = x.size()
-
-        x = x.view(N, self.group_num, -1)  # 그룹으로 묶고
-
-        mean = x.mean(dim=2, keepdim=True)  # 평균
-        std = x.std(dim=2, keepdim=True)  # 표준편차
-
-        x = (x - mean) / (std + self.eps)
-        x = x.view(N, C, H, W)  # 원래대로 돌리기.
-
-        return x * self.gamma + self.beta
-    
-
-class Conv2d(nn.Conv2d):
-    def __init__(self, in_channels, out_channels, kernel_size, stride=1,
-                 padding=0, dilation=1, groups=1, bias=True):
-        super(Conv2d, self).__init__(in_channels, out_channels, kernel_size, stride,
-                                     padding, dilation, groups, bias)
-
-    def forward(self, x):
-        weight = self.weight
-        weight_mean = weight.mean(dim=1, keepdim=True).mean(dim=2,
-                                                            keepdim=True).mean(dim=3, keepdim=True)
-        weight = weight - weight_mean
-        std = weight.view(weight.size(0), -1).std(dim=1).view(-1, 1, 1, 1) + 1e-5
-        weight = weight / std.expand_as(weight)
-        return F.conv2d(x, weight, self.bias, self.stride, self.padding,
-                        self.dilation, self.groups)
-
-
 class ComplexConv2d(nn.Module):
 
     def __init__(
@@ -299,18 +238,9 @@ class ComplexConv2d(nn.Module):
         nn.init.constant_(self.real_conv.bias, 0.)
         nn.init.constant_(self.imag_conv.bias, 0.)
 
-        # # weight standardization
-        # self.real_conv = Conv2d(self.in_channels, self.out_channels, kernel_size, self.stride,
-        #                            padding=[self.padding[0], 0], dilation=self.dilation, groups=self.groups)
-        # self.imag_conv = Conv2d(self.in_channels, self.out_channels, kernel_size, self.stride,
-        #                            padding=[self.padding[0], 0], dilation=self.dilation, groups=self.groups)
-        #
-        # nn.init.constant_(self.real_conv.bias, 0.)
-        # nn.init.constant_(self.imag_conv.bias, 0.)
-
     def forward(self, inputs):
         if self.padding[1] != 0 and self.causal:
-            inputs = F.pad(inputs, [self.padding[1], 0, 0, 0])
+            inputs = F.pad(inputs, [self.padding[1], 0, 0, 0])  # # [width left, width right, height left, height right]
         else:
             inputs = F.pad(inputs, [self.padding[1], self.padding[1], 0, 0])
 
@@ -337,25 +267,6 @@ class ComplexConv2d(nn.Module):
         return out
 
 
-class ConvTranspose2d(nn.ConvTranspose2d):
-    def forward(self, x, output_size=None):
-        if self.padding_mode != 'zeros':
-            raise ValueError('Only `zeros` padding mode is supported for ConvTranspose2d')
-
-        output_padding = self._output_padding(
-            x, output_size, self.stride, self.padding, self.kernel_size, self.dilation)  # type: ignore[arg-type]
-
-        weight = self.weight
-        weight_mean = weight.mean(dim=1, keepdim=True).mean(dim=2,
-                                                            keepdim=True).mean(dim=3, keepdim=True)
-        weight = weight - weight_mean
-        std = weight.view(weight.size(0), -1).std(dim=1).view(-1, 1, 1, 1) + 1e-5
-        weight = weight / std.expand_as(weight)
-
-        return F.conv_transpose2d(x, weight, self.bias, self.stride, self.padding,
-                                  output_padding, self.groups, self.dilation)
-    
-    
 class ComplexConvTranspose2d(nn.Module):
 
     def __init__(
@@ -395,6 +306,7 @@ class ComplexConvTranspose2d(nn.Module):
         nn.init.constant_(self.real_conv.bias, 0.)
         nn.init.constant_(self.imag_conv.bias, 0.)
 
+        # # weight standardization
         # self.real_conv = ConvTranspose2d(self.in_channels, self.out_channels, kernel_size, self.stride,
         #                                     padding=self.padding, output_padding=output_padding, groups=self.groups)
         # self.imag_conv = ConvTranspose2d(self.in_channels, self.out_channels, kernel_size, self.stride,
@@ -430,6 +342,93 @@ class ComplexConvTranspose2d(nn.Module):
         real = real2real - imag2imag
         imag = real2imag + imag2real
         out = torch.cat([real, imag], self.complex_axis)
+
+        return out
+
+
+class RealConv2d(nn.Module):
+
+    def __init__(
+            self,
+            in_channels,
+            out_channels,
+            kernel_size=(1, 1),
+            stride=(1, 1),
+            padding=(0, 0),
+            dilation=1,
+            groups=1,
+            causal=True,
+            complex_axis=1,
+    ):
+        '''
+            in_channels: real+imag
+            out_channels: real+imag
+            kernel_size : input [B,C,D,T] kernel size in [D,T]
+            padding : input [B,C,D,T] padding in [D,T]
+            causal: if causal, will padding time dimension's left side,
+                    otherwise both
+
+        '''
+        super(RealConv2d, self).__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+        self.causal = causal
+        self.groups = groups
+        self.dilation = dilation
+
+        self.conv = nn.Conv2d(self.in_channels, self.out_channels, kernel_size, self.stride,
+                              padding=[self.padding[0], 0], dilation=self.dilation, groups=self.groups)
+
+        nn.init.normal_(self.conv.weight.data, std=0.05)
+        nn.init.constant_(self.conv.bias, 0.)
+
+    def forward(self, inputs):
+        if self.padding[1] != 0 and self.causal:
+            inputs = F.pad(inputs, [self.padding[1], 0, 0, 0])  ## [width left, width right, height left, height right]
+        else:
+            inputs = F.pad(inputs, [self.padding[1], self.padding[1], 0, 0])
+
+        out = self.conv(inputs)
+
+        return out
+
+
+class RealConvTranspose2d(nn.Module):
+
+    def __init__(
+            self,
+            in_channels,
+            out_channels,
+            kernel_size=(1, 1),
+            stride=(1, 1),
+            padding=(0, 0),
+            output_padding=(0, 0),
+            groups=1
+    ):
+        '''
+            in_channels: real+imag
+            out_channels: real+imag
+        '''
+        super(RealConvTranspose2d, self).__init__()
+        self.in_channels = in_channels
+        self.out_channels = out_channels
+        self.kernel_size = kernel_size
+        self.stride = stride
+        self.padding = padding
+        self.output_padding = output_padding
+        self.groups = groups
+
+        self.conv = nn.ConvTranspose2d(self.in_channels, self.out_channels, kernel_size, self.stride,
+                                       padding=self.padding, output_padding=output_padding, groups=self.groups)
+
+        nn.init.normal_(self.conv.weight.data, std=0.05)
+        nn.init.constant_(self.conv.bias, 0.)
+
+    def forward(self, inputs):
+        out = self.conv(inputs)
 
         return out
 
@@ -684,17 +683,6 @@ def get_statistics_inp(inp):
     return mu_inp, sig_inp
 
 
-# normalize [-1 1]
-def normalize_dataset(dataset):
-    for i in range(len(dataset)):
-        noisy_max = np.max(abs(dataset[i][0]))
-        dataset[i][0] = dataset[i][0] / noisy_max
-
-        clean_max = np.max(abs(dataset[i][1]))
-        dataset[i][1] = dataset[i][1] / clean_max
-    return dataset
-
-
 ############################################################################
 #                       for plotting the samples                           #
 ############################################################################
@@ -710,18 +698,18 @@ def fig2np(fig):
     return data
 
 
-def plot_spectrogram_to_numpy(input_wav, fs, n_fft, n_overlap, win, mode, clim, label):
+def plot_spectrogram_to_numpy(input_wav, fs, n_fft, n_overlap, mode, clim, label):
     # cuda to cpu
     input_wav = input_wav.cpu().detach().numpy()
 
     fig, ax = plt.subplots(figsize=(12, 3))
 
     if mode == 'phase':
-        pxx, freq, t, cax = plt.specgram(input_wav, NFFT=int(n_fft), Fs=int(fs), window=win, noverlap=n_overlap,
+        pxx, freq, t, cax = plt.specgram(input_wav, NFFT=int(n_fft), Fs=int(fs), noverlap=n_overlap,
                                          cmap='jet',
                                          mode=mode)
     else:
-        pxx, freq, t, cax = plt.specgram(input_wav, NFFT=int(n_fft), Fs=int(fs), window=win, noverlap=n_overlap,
+        pxx, freq, t, cax = plt.specgram(input_wav, NFFT=int(n_fft), Fs=int(fs), noverlap=n_overlap,
                                          cmap='jet')
 
     plt.xlabel('Time (s)')
@@ -740,7 +728,7 @@ def plot_spectrogram_to_numpy(input_wav, fs, n_fft, n_overlap, win, mode, clim, 
     return data
 
 
-def plot_mask_to_numpy(mask, fs, n_fft, n_overlap, win, clim1, clim2, cmap):
+def plot_mask_to_numpy(mask, fs, n_fft, n_overlap, clim1, clim2, cmap):
     frame_num = mask.shape[0]
     shift_length = n_overlap
     frame_length = n_fft
@@ -766,17 +754,17 @@ def plot_mask_to_numpy(mask, fs, n_fft, n_overlap, win, clim1, clim2, cmap):
     return data
 
 
-def plot_error_to_numpy(estimated, target, fs, n_fft, n_overlap, win, mode, clim1, clim2, label):
+def plot_error_to_numpy(estimated, target, fs, n_fft, n_overlap, mode, clim1, clim2, label):
     fig, ax = plt.subplots(figsize=(12, 3))
-    if mode == None:
-        pxx1, freq, t, cax = plt.specgram(estimated, NFFT=n_fft, Fs=int(fs), window=win, noverlap=n_overlap, cmap='jet')
-        pxx2, freq, t, cax = plt.specgram(target, NFFT=n_fft, Fs=int(fs), window=win, noverlap=n_overlap, cmap='jet')
+    if mode is None:
+        pxx1, freq, t, cax = plt.specgram(estimated, NFFT=n_fft, Fs=int(fs), noverlap=n_overlap, cmap='jet')
+        pxx2, freq, t, cax = plt.specgram(target, NFFT=n_fft, Fs=int(fs), noverlap=n_overlap, cmap='jet')
         im = ax.imshow(10 * np.log10(pxx1) - 10 * np.log10(pxx2), aspect='auto', origin='lower', interpolation='none',
                        cmap='jet')
     else:
-        pxx1, freq, t, cax = plt.specgram(estimated, NFFT=n_fft, Fs=int(fs), window=win, noverlap=n_overlap, cmap='jet',
+        pxx1, freq, t, cax = plt.specgram(estimated, NFFT=n_fft, Fs=int(fs), noverlap=n_overlap, cmap='jet',
                                           mode=mode)
-        pxx2, freq, t, cax = plt.specgram(target, NFFT=n_fft, Fs=int(fs), window=win, noverlap=n_overlap, cmap='jet',
+        pxx2, freq, t, cax = plt.specgram(target, NFFT=n_fft, Fs=int(fs), noverlap=n_overlap, cmap='jet',
                                           mode=mode)
         im = ax.imshow(pxx1 - pxx2, aspect='auto', origin='lower', interpolation='none', cmap='jet')
 
@@ -802,140 +790,9 @@ def plot_error_to_numpy(estimated, target, fs, n_fft, n_overlap, win, mode, clim
     return data
 
 
-stft_for_pam = ConvSTFT(win_len, win_inc, fft_len, window, 'complex', fix=True).to(DEVICE)
-istft_for_pam = ConviSTFT(win_len, win_inc, fft_len, window, 'complex', fix=True).to(DEVICE)
-
-
-def pam_pw_draw(inputs, targets, outputs, residual_noise_wavs, GMTs, dir_to_save, fs, fft_len, epoch):
-    freq_hz = np.arange(1, int(fft_len / 2) + 2) * (fs / fft_len)
-
-    fig = plt.figure()
-    ax1 = fig.add_subplot(1, 1, 1)
-    for data_num in range(6):
-        # i = inputs[data_num].cpu().detach().numpy()
-        # wav.write(dir_to_save + '/noisy.wav', fs, i)
-        # t = targets[data_num].cpu().detach().numpy()
-        # wav.write(dir_to_save + '/target.wav', fs, t)
-        # o = outputs[data_num].cpu().detach().numpy()
-        # wav.write(dir_to_save + '/estimated.wav', fs, o)
-        # r = residual_noise_wavs[data_num].cpu().detach().numpy()
-        # wav.write(dir_to_save + '/residual_noise.wav', fs, r)
-        # # frame level draw
-        # frame_length = len(noise_specs[data_num])
-
-        # i_specs = stft_for_pam(inputs)
-        # i_specs = i_specs[data_num, :, 100:201]
-        # i_specs = i_specs.unsqueeze(0)
-        # i = istft_for_pam(i_specs)
-        # i = i.cpu().detach().numpy()
-        # wav.write(dir_to_save + '/pam/{}_sample/noisy.wav'.format(data_num), fs, i)
-        #
-        # t_specs = stft_for_pam(targets)
-        # t_specs = t_specs[data_num, :, 100:201]
-        # t_specs = t_specs.unsqueeze(0)
-        # t = istft_for_pam(t_specs)
-        # t = t.cpu().detach().numpy()
-        # wav.write(dir_to_save + '/pam/{}_sample/target.wav'.format(data_num), fs, t)
-        #
-        # o_specs = stft_for_pam(outputs)
-        # o_specs = o_specs[data_num, :, 100:201]
-        # o_specs = o_specs.unsqueeze(0)
-        # o = istft_for_pam(o_specs)
-        # o = o.cpu().detach().numpy()
-        # wav.write(dir_to_save + '/pam/{}_sample/estimated.wav'.format(data_num), fs, o)
-        #
-        # r_specs = stft_for_pam(residual_noise_wavs)
-        # r_specs = r_specs[data_num, :, 100:201]
-        # r_specs = r_specs.unsqueeze(0)
-        # r = istft_for_pam(r_specs)
-        # r = r.cpu().detach().numpy()
-        # wav.write(dir_to_save + '/pam/{}_sample/residual.wav'.format(data_num), fs, r)
-
-        for frame_num in range(100, 201):
-            current_GMT = GMTs[data_num, 0, frame_num, :].cpu()
-
-            # get residual noise spec
-            noise_specs = stft_for_pam(residual_noise_wavs)
-            real = noise_specs[:, :fft_len // 2 + 1]
-            imag = noise_specs[:, fft_len // 2 + 1:]
-            noise_spec_mags = torch.sqrt(real ** 2 + imag ** 2 + 1e-8)
-            noise_spec_mags = noise_spec_mags.permute(0, 2, 1)
-
-            # Spectral analysis and SPL Normalization
-            current_noise_spec = noise_spec_mags[data_num, frame_num, :].cpu().detach().numpy()
-            PN = 90.302
-            Noisy_P = PN + 10 * np.log10(current_noise_spec ** 2 + 1e-16)  # Only first half is required
-
-            # figure 1
-            ax1.plot(freq_hz, Noisy_P, 'r')
-            ax1.plot(freq_hz, 10 * np.log10(current_GMT + 1e-7), 'k--', lw=2)
-            gthres = 10 * np.log10(current_GMT + 1e-7).numpy()
-            tmp1 = np.where(Noisy_P < gthres, Noisy_P, gthres)
-            tmp2 = np.where(Noisy_P >= gthres, Noisy_P, gthres)
-            ax1.fill_between(freq_hz, gthres, tmp1, color='yellow', alpha=1.0)
-            ax1.fill_between(freq_hz, gthres, tmp2, color='blue', alpha=1.0)
-
-            ax1.legend(['Noise', 'GMT'])
-            ax1.grid()
-
-            ax1.set_xlim(0, int(fs / 2))
-            ax1.set_ylim(0, 120)
-
-            plt.title('[{} Epoch] {} frame'.format(epoch-1, frame_num))
-            plt.xlabel('Frequency');
-            plt.ylabel('dB');
-            # plt.show()
-
-            # make the file directory to save the samples
-            if not os.path.exists(dir_to_save + '/pam'):
-                os.mkdir(dir_to_save + '/pam')
-            if not os.path.exists(dir_to_save + '/pam/{}_sample'.format(data_num)):
-                os.mkdir(dir_to_save + '/pam/{}_sample'.format(data_num))
-            if not os.path.exists(dir_to_save + '/pam/{}_sample/{}_epoch'.format(data_num, epoch-1)):
-                os.mkdir(dir_to_save + '/pam/{}_sample/{}_epoch'.format(data_num, epoch-1))
-
-            fig.savefig(dir_to_save + '/pam/{}_sample/{}_epoch/{}_frame.png'.format(data_num, epoch-1, frame_num))
-            plt.cla()  # avoid warning ( too many figure )
-            # print('{}_frame.png'.format(frame_num))
-    plt.close(fig)
-
-
 ############################################################################
-#                                for run.py                                #
+#                              for trainer.py                              #
 ############################################################################
-def near_avg_index(array):
-    array_mean = np.mean(array)
-
-    distance_arr = []
-    for i in range(len(array)):
-        val = array[i]
-        distance = abs(array_mean - val)
-        distance_arr.append(distance)
-
-    index = distance_arr.index(min(distance_arr))
-    return index
-
-
-def max_index(array):
-    array_max = np.max(array)
-
-    for i in range(len(array)):
-        val = array[i]
-        if val == array_max:
-            index = i
-    return index
-
-
-def min_index(array):
-    array_min = np.min(array)
-
-    for i in range(len(array)):
-        val = array[i]
-        if val == array_min:
-            index = i
-    return index
-
-
 class Bar(object):
     def __init__(self, dataloader):
         if not hasattr(dataloader, 'dataset'):
@@ -1004,4 +861,3 @@ class Bar(object):
         self._idx = 0
         self._batch_idx = 0
         self._time = []
-
