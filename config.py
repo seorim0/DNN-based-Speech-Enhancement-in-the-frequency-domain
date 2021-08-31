@@ -66,6 +66,8 @@ rnn_units = 256
 #                      setting error check                            #
 #######################################################################
 # if the setting is wrong, print error message
+assert not (masking_mode == 'Direct(None make)' and perceptual is not False), \
+    "This setting is not created "
 
 #######################################################################
 #                           print setting                             #
