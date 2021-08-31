@@ -2,7 +2,7 @@
 You can do DNN-based speech enhancement(SE) using various method through this repository.   
 First, you have to make noisy data by mixing clean speech and noise. The dataset is used for deep learning training.   
 And, you can adjust the type of the network and configuration in various ways, as shown below.   
-The result of the network can be evaluated through various objective metrics (PESQ, STOI, CSIG, CBAK, COVL).
+The results of the network can be evaluated through various objective metrics (PESQ, STOI, CSIG, CBAK, COVL).
    
 ## Networks   
 > You can find a list that you can adjust in various ways at config.py, and they are:   
@@ -24,7 +24,11 @@ The result of the network can be evaluated through various objective metrics (PE
 > and you can join the loss functions with perceptual loss.   
 * LMS
 * PMSQE
-   
+
+## Tensorboard
+> As shown below, you can check whether the network is being trained well in real time through 'write_on_tensorboard.py'.   
+![tensor](https://user-images.githubusercontent.com/55497506/131444707-4459a979-8652-46f4-82f1-0c640cfff685.png)   
+
 ## Requirements
 > This repository is tested on Ubuntu 20.04.
 * Python 3.7+
