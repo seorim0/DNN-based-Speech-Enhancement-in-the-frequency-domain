@@ -34,7 +34,7 @@ The results of the network can be evaluated through various objective metrics (P
 
 ## Tutorials
 ['SE_tutorials.ipynb'](https://github.com/seorim0/Speech_enhancement_for_you/blob/main/SE_tutorials.ipynb) was made for tutorial.   
-You can simply train the CRN with the colab file.   
+You can simply train the CRN with the colab file without any preparation .   
 
 
 <!-- NETWORKS -->
