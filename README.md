@@ -37,7 +37,7 @@ The results of the network can be evaluated through various objective metrics (P
    # The shape of the dataset
    [data_num, 2 (inputs and targets), sampling_frequency * data_length]   
    
-   For example, if you want to use 1,000 3-second data sets with a sampling frequency of 16k, the shape is,   
+   # For example, if you want to use 1,000 3-second data sets with a sampling frequency of 16k, the shape is,   
    [1000, 2, 48000]
    ```
 3. Set [config.py](https://github.com/seorim0/Speech_enhancement_for_you/blob/main/config.py)
