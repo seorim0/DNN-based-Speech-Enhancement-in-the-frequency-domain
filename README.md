@@ -1,5 +1,4 @@
 # Speech enhancement with Pytorch
-## Overview
 You can do DNN-based speech enhancement(SE) using various method through this repository. First, you can make noisy data by mixing clean speech and noise, and then you can generate a dataset with those data. (If you already have a dataset, skip this.) The dataset is used for deep learning training, and the type and configuration of the model can be adjusted in various ways, if you want. And, the result of the network can be evaluated through various objective metrics (PESQ, STOI, CSIG, CBAK, COVL).
    
 ## Models   
