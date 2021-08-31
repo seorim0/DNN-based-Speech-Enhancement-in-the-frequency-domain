@@ -63,7 +63,7 @@ class Wave_Dataset(Dataset):
 
     def __getitem__(self, idx):
         inputs = self.input[idx][0]
-        argets = self.input[idx][1]
+        targets = self.input[idx][1]
 
         # transform to torch from numpy
         inputs = torch.from_numpy(inputs)
