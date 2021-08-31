@@ -29,13 +29,6 @@ The results of the network can be evaluated through various objective metrics (P
 * Pytorch 1.9.0
 <br>
 
-> Library
-* tqdm
-* asteroid   
-* scipy   
-* matplotlib   
-* tensorboardX    
-
 
 ## Getting Started   
 
