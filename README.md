@@ -31,6 +31,17 @@ The results of the network can be evaluated through various objective metrics (P
 
 
 ## Getting Started   
+1. Install the libraries
+2. Make a dataset for train and validation
+   ```sh
+   [data_num, 2 (inputs and targets), sampling_frequency * data_length]
+   For example, if you want to use 1,000 3-second data sets with a sampling frequency of 16k,
+   [1000, 2, 48000]
+   ```
+3. Set [config.py](https://github.com/seorim0/Speech_enhancement_for_you/blob/main/config.py)
+
+4. Run [train_interface.py](https://github.com/seorim0/Speech_enhancement_for_you/blob/main/train_interface.py)
+
 
 ## Tutorials
 ['SE_tutorials.ipynb'](https://github.com/seorim0/Speech_enhancement_for_you/blob/main/SE_tutorials.ipynb) was made for tutorial.   
