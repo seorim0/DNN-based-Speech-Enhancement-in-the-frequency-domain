@@ -301,16 +301,16 @@ class DCCRN(nn.Module):
 
     def loss(self, estimated, target, real_spec=0, img_spec=0, perceptual=False):
         if perceptual:
-            clean_specs = self.stft(target)
-            clean_real = clean_specs[:, :self.fft_len // 2 + 1]
-            clean_imag = clean_specs[:, self.fft_len // 2 + 1:]
-            clean_mags = torch.sqrt(clean_real ** 2 + clean_imag ** 2 + 1e-7)
-
-            est_clean_mags = torch.sqrt(real_spec ** 2 + img_spec ** 2 + 1e-7)
             if cfg.perceptual == 'LMS':
+                clean_specs = self.stft(target)
+                clean_real = clean_specs[:, :self.fft_len // 2 + 1]
+                clean_imag = clean_specs[:, self.fft_len // 2 + 1:]
+                clean_mags = torch.sqrt(clean_real ** 2 + clean_imag ** 2 + 1e-7)
+
+                est_clean_mags = torch.sqrt(real_spec ** 2 + img_spec ** 2 + 1e-7)
                 return get_array_lms_loss(clean_mags, est_clean_mags)
             elif cfg.perceptual == 'PMSQE':
-                return get_array_pmsqe_loss(clean_mags, est_clean_mags)
+                return get_array_pmsqe_loss(target, estimated)
         else:
             if cfg.loss == 'MSE':
                 return F.mse_loss(estimated, target, reduction='mean')
@@ -549,7 +549,7 @@ class CRN(nn.Module):
             if cfg.perceptual == 'LMS':
                 return get_array_lms_loss(target_mags, out_mags)
             elif cfg.perceptual == 'PMSQE':
-                return get_array_pmsqe_loss(target_mags, out_mags)
+                return get_array_pmsqe_loss(target, estimated)
         else:
             if cfg.loss == 'MSE':
                 return F.mse_loss(estimated, target, reduction='mean')
