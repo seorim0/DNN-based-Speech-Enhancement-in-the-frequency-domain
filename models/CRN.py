@@ -4,12 +4,14 @@
 class CRN(nn.Module):
     def __init__(
             self,
-            rnn_layers=rnn_layers,
-            rnn_units=rnn_units,
-            win_len=win_len,
-            win_inc=win_inc,
-            fft_len=fft_len,
-            win_type=window,
+            rnn_layers=cfg.rnn_layers,
+            rnn_input_size=cfg.rnn_input_size,
+            rnn_units=cfg.rnn_units,
+            win_len=cfg.win_len,
+            win_inc=cfg.win_inc,
+            fft_len=cfg.fft_len,
+            win_type=cfg.window,
+            masking_mode=None if cfg.masking_mode == 'Direct(None make)' else cfg.masking_mode,
             kernel_size=5
     ):
         '''
@@ -70,7 +72,7 @@ class CRN(nn.Module):
         )
         self.tranform = nn.Linear(self.rnn_units, self.rnn_input_size)
 
-        if skip_type:
+        if cfg.skip_type:
             for idx in range(len(self.kernel_num) - 1, 0, -1):
                 if idx != 1:
                     self.decoder.append(
