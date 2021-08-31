@@ -1,3 +1,11 @@
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from tools_for_model import ConvSTFT, ConviSTFT, RealConv2d, RealConvTranspose2d
+import config as cfg
+from tools_for_loss import sdr, si_sdr, si_snr, get_array_lms_loss, get_array_pmsqe_loss
+
+
 #######################################################################
 #                            real network                             #
 #######################################################################
@@ -11,7 +19,7 @@ class CRN(nn.Module):
             win_inc=cfg.win_inc,
             fft_len=cfg.fft_len,
             win_type=cfg.window,
-            masking_mode=None if cfg.masking_mode == 'Direct(None make)' else cfg.masking_mode,
+            masking_mode=cfg.masking_mode,
             kernel_size=5
     ):
         '''
@@ -35,8 +43,9 @@ class CRN(nn.Module):
         self.output_dim = output_dim
         self.hidden_layers = rnn_layers
         self.kernel_size = kernel_size
-        kernel_num = dccrn_kernel_num
+        kernel_num = cfg.dccrn_kernel_num
         self.kernel_num = [2] + kernel_num
+        self.masking_mode = masking_mode
 
         # bidirectional=True
         bidirectional = False
@@ -140,7 +149,6 @@ class CRN(nn.Module):
             self.enhance.flatten_parameters()
 
     def forward(self, inputs, targets=0):
-
         mags, phase = self.stft(inputs)
 
         out = mags
@@ -162,7 +170,7 @@ class CRN(nn.Module):
 
         out = out.permute(1, 2, 3, 0)
 
-        if skip_type:  # use skip connection
+        if cfg.skip_type:  # use skip connection
             for idx in range(len(self.decoder)):
                 out = torch.cat([out, encoder_out[-1 - idx]], 1)
                 out = self.decoder[idx](out)
@@ -176,10 +184,9 @@ class CRN(nn.Module):
         out = out.squeeze(1)
 
         # for loss calculation
-        target_mags, _ = self.stft(target)
+        target_mags, _ = self.stft(targets)
         
-        if direct_mapping:  # spectral mapping
-
+        if self.masking_mode == 'Direct(None make)':  # spectral mapping
             out_real = out * torch.cos(phase)
             out_imag = out * torch.sin(phase)
 
@@ -203,7 +210,7 @@ class CRN(nn.Module):
             out_wav = torch.squeeze(out_wav, 1)
             out_wav = torch.clamp_(out_wav, -1, 1)
 
-            return out_mags, target_msgs, out_wav
+            return est_mags, target_mags, out_wav
 
     def get_params(self, weight_decay=0.0):
         # add L2 penalty
