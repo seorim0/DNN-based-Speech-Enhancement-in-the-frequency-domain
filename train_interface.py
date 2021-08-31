@@ -8,7 +8,10 @@ import itertools
 from models import network  # you can import 'DCCRN' or 'CRN'
 from write_on_tensorboard import Writer
 from dataloader import create_dataloader
-from trainer import model_train, model_validate
+from trainer import model_train, model_validate, \
+    model_perceptual_train, model_perceptual_validate, \
+    complex_model_direct_train, complex_model_direct_validate, \
+    real_model_direct_train, real_model_direct_validate
 
 
 ###############################################################################
