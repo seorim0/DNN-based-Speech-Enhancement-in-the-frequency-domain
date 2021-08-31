@@ -4,10 +4,7 @@ Where the model is actually trained and validated
 
 import torch
 import numpy as np
-import config as cfg
-
 import tools_for_model as tools
-import torch.nn.functional as F
 from tools_for_estimate import cal_pesq, cal_stoi
 
 
@@ -350,7 +347,7 @@ def real_model_direct_validate(model, validation_loader, writer, dir_to_save, ep
             inputs = inputs.float().to(DEVICE)
             targets = targets.float().to(DEVICE)
 
-            output_mag, target_mag, _ = model(inputs, targets)
+            output_mag, target_mag, outputs = model(inputs, targets)
             loss = model.loss(output_mag, target_mag)
 
             validation_loss += loss
