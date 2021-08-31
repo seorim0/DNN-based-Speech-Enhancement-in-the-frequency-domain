@@ -30,7 +30,7 @@ def model_train(model, optimizer, train_loader, DEVICE):
         inputs = inputs.float().to(DEVICE)
         targets = targets.float().to(DEVICE)
 
-        _, _, outputs = model(inputs)
+        _, _, outputs = model(inputs, targets)
         loss = model.loss(outputs, targets)
         # # if you want to check the scale of the loss
         # print('loss: {:.4}'.format(loss))
@@ -172,7 +172,7 @@ def model_validate(model, validation_loader, writer, dir_to_save, epoch, DEVICE)
             inputs = inputs.float().to(DEVICE)
             targets = targets.float().to(DEVICE)
 
-            _, _, outputs = model(inputs)
+            _, _, outputs = model(inputs, targets)
             loss = model.loss(outputs, targets)
 
             validation_loss += loss
