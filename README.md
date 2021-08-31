@@ -41,7 +41,10 @@ The results of the network can be evaluated through various objective metrics (P
    [1000, 2, 48000]
    ```
 3. Set [config.py](https://github.com/seorim0/Speech_enhancement_for_you/blob/main/config.py)
-
+  ```sh
+  # If you need to adjust any settings, simply change this file.   
+  # When you run this project for the first time, you need to set the path where the model and logs will be saved. 
+  ```
 4. Run [train_interface.py](https://github.com/seorim0/Speech_enhancement_for_you/blob/main/train_interface.py)
 
 
