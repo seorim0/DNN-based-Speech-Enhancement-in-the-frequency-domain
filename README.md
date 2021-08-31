@@ -11,16 +11,17 @@ The results of the network can be evaluated through various objective metrics (P
   <summary>You can change</summary>
   <ol>
     <li>
-      <a href="#Networks">About The Project</a>
+      <a href="#Networks">Networks</a>
     </li>
     <li>
-      <a href="#Learning methods">Getting Started</a>
+      <a href="#Learning methods">Learning methods</a>
     </li>
-    <li><a href="#Loss functions">Usage</a></li>
+    <li><a href="#Loss functions">Loss functions</a></li>
   </ol>
 </details>
 
 
+<!-- Networks -->
 ## Networks   
 > You can find a list that you can adjust in various ways at config.py, and they are:   
 * Real network   
@@ -28,10 +29,12 @@ The results of the network can be evaluated through various objective metrics (P
 * Complex network   
    - deep complex convolutional recurrent network (DCCRN) [[1]](https://arxiv.org/abs/2008.00264)  
 
+<!-- Learning methods -->
 ## Learning methods
 * T-F masking
 * Spectral mapping
 
+<!-- Loss functions -->
 ## Loss functions   
 * MSE   
 * SDR   
