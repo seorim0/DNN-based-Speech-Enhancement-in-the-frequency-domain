@@ -175,8 +175,10 @@ class CRN(nn.Module):
         # mask_mags = F.pad(out, [0, 0, 1, 0])
         out = out.squeeze(1)
 
+        # for loss calculation
+        target_mags, _ = self.stft(target)
+        
         if direct_mapping:  # spectral mapping
-            target_mags, _ = self.stft(target)
 
             out_real = out * torch.cos(phase)
             out_imag = out * torch.sin(phase)
@@ -201,7 +203,7 @@ class CRN(nn.Module):
             out_wav = torch.squeeze(out_wav, 1)
             out_wav = torch.clamp_(out_wav, -1, 1)
 
-            return out_wav
+            return out_mags, target_msgs, out_wav
 
     def get_params(self, weight_decay=0.0):
         # add L2 penalty
@@ -220,12 +222,18 @@ class CRN(nn.Module):
         }]
         return params
 
-    def loss(self, estimated, target):
-        if current_loss == 'MSE':
-            return F.mse_loss(estimated, target, reduction='mean')
-        elif current_loss == 'SDR':
-            return -sdr(target, estimated)
-        elif current_loss == 'SI-SNR':
-            return -(si_snr(estimated, target))
-        elif current_loss == 'SI-SDR':
-            return -(si_sdr(target, estimated))
+    def loss(self, estimated, target, out_mags=0, target_mags=0, perceptual=False):
+        if perceptual:
+            if cfg.perceptual == 'LMS':
+                return get_array_lms_loss(target_mags, out_mags)
+            elif cfg.perceptual == 'PMSQE':
+                return get_array_pmsqe_loss(target_mags, out_mags)
+        else:
+            if cfg.loss == 'MSE':
+                return F.mse_loss(estimated, target, reduction='mean')
+            elif cfg.loss == 'SDR':
+                return -sdr(target, estimated)
+            elif cfg.loss == 'SI-SNR':
+                return -(si_snr(estimated, target))
+            elif cfg.loss == 'SI-SDR':
+                return -(si_sdr(target, estimated))
