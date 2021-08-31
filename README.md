@@ -5,7 +5,7 @@ First, you can make noisy data by mixing clean speech and noise, and then you ca
 ## Models   
 You can find a list that you can adjust in various ways at config.py, and they are:   
 * CRN   
-* DCCRN   
+* DCCRN [[1]](https://arxiv.org/abs/2008.00264)  
    
 ## Loss functions   
 * MSE   
@@ -20,9 +20,9 @@ You can find a list that you can adjust in various ways at config.py, and they a
 ## Requirements
 > This repository is tested on Ubuntu 20.04.
 * Python 3.7+
-* Cuda 10.1+
-* CuDNN 7+
-* Pytorch 1.7+
+* Cuda 11.1+
+* CuDNN 8+
+* Pytorch 1.9+
 <br>
 
 > Library
