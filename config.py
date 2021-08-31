@@ -10,8 +10,8 @@ you have to change this file.
 #######################################################################
 job_dir = './models/'
 logs_dir = './logs/'
-chkpt_model = 'P003_6.30_DCCRN_MSE'
-chkpt = str('3')
+chkpt_model = None  # 'FILE PATH (if you have pretrained model..)'
+chkpt = str("EPOCH")
 if chkpt_model is not None:
     chkpt_path = job_dir + chkpt_model + '/chkpt_' + chkpt + '.pt'
 
@@ -19,47 +19,42 @@ if chkpt_model is not None:
 #                         possible setting                            #
 #######################################################################
 # the list you can do
-model_list = ['DCCRN']  # ['cCRN', 'DCUNET', 'DCCRN']
+model_list = ['DCCRN', 'CRN']
 loss_list = ['MSE', 'SDR', 'SI-SNR', 'SI-SDR']
-perceptual_list = ['False', 'LMS', 'PMSQE', 'PAM']
+perceptual_list = ['False', 'LMS', 'PMSQE']
 lstm_type = ['real', 'complex']
-batch_type = ['real', 'complex']
 mask_type = ['Direct(None make)', 'E', 'C', 'R']
 window_type = ['hanning']
 
 # experiment number setting
-expr_num = 'P003'
+expr_num = 'EXPERIMENT_NUMBER'
 DEVICE = 'cuda'  # if you want to run the code with 'cpu', change 'cpu'
 #######################################################################
 #                           current setting                           #
 #######################################################################
 model = model_list[0]
-cycle = False  # for Cyclic model
-complex_model_trial = False  ###################
-loss = loss_list[0]
-perceptual = perceptual_list[3]
+loss = loss_list[1]
+perceptual = perceptual_list[0]
 lstm = lstm_type[1]
-batch_norm = batch_type[0]
 
 masking_mode = mask_type[1]
-skip_type = True
 window = window_type[0]
+skip_type = True   # False, if you want to remove 'skip connection'
 
 # hyper-parameters
-max_epochs = 120
+max_epochs = 100
 learning_rate = 0.001
-batch = 15
+batch = 10
 
 # kernel size
 dccrn_kernel_num = [32, 64, 128, 256, 256, 256]
-dcunet_kernel_num = [72, 72, 144, 144, 144, 160, 160, 180]
 #######################################################################
 #                         model information                           #
 #######################################################################
 fs = 16000
 win_len = 400
 win_inc = 100
-ola_ratio = win_inc / win_len
+ola_ratio = 1 - win_inc / win_len
 fft_len = 512
 sam_sec = fft_len / fs
 frm_samp = fs * (fft_len / fs)
@@ -78,12 +73,8 @@ rnn_units = 256
 print('--------------------  C  O  N  F  I  G  ----------------------')
 print('--------------------------------------------------------------')
 print('MODEL INFO : {}'.format(model))
-if complex_model_trial:
-    print('!!!!!!!!!!!!!!!!!!!!!! Trial version !!!!!!!!!!!!!!!!!!!!!!!!!')
 print('LOSS INFO : {}, perceptual : {}'.format(loss, perceptual))
 print('LSTM : {}'.format(lstm))
-print('BATCH NORM : {}'.format(batch_norm))
-print('CYCLE : {}'.format(cycle))
 print('SKIP : {}'.format(skip_type))
 print('MASKING INFO : {}'.format(masking_mode))
 print('\nBATCH : {}'.format(batch))
