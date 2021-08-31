@@ -31,7 +31,7 @@ The results of the network can be evaluated through various objective metrics (P
 
 
 ## Getting Started   
-1. Install the libraries
+1. Install the necessary libraries 
 2. Make a dataset for train and validation
    ```sh
    # The shape of the dataset
