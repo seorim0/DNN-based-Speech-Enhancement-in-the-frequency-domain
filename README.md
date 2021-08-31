@@ -4,10 +4,10 @@ First, you can make noisy data by mixing clean speech and noise, and then you ca
    
 ## Networks   
 > You can find a list that you can adjust in various ways at config.py, and they are:   
-* Real network
-** convolutional recurrent network (CRN)   
-* Complex network 
-** deep complex convolutional recurrent network (DCCRN) [[1]](https://arxiv.org/abs/2008.00264)  
+* Real network   
+   - convolutional recurrent network (CRN)   
+* Complex network   
+   - deep complex convolutional recurrent network (DCCRN) [[1]](https://arxiv.org/abs/2008.00264)  
 
 ## Learning methods
 * T-F masking
