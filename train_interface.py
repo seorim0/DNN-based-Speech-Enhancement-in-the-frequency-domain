@@ -58,17 +58,17 @@ total_params = calculate_total_params(model)
 
 # Set trainer and estimator
 if cfg.perceptual is not False:
-    trainer = model_perceptual_train()
-    estimator = model_perceptual_validate()
+    trainer = model_perceptual_train
+    estimator = model_perceptual_validate
 elif cfg.masking_mode == 'Direct(None make)' and cfg.model == 'DCCRN':
-    trainer = complex_model_direct_train()
-    estimator = complex_model_direct_validate()
+    trainer = complex_model_direct_train
+    estimator = complex_model_direct_validate
 elif cfg.masking_mode == 'Direct(None make)' and cfg.model == 'CRN':
-    trainer = real_model_direct_train()
-    estimator = real_model_direct_validate()
+    trainer = real_model_direct_train
+    estimator = real_model_direct_validate
 else:
-    trainer = model_train()
-    estimator = model_validate()
+    trainer = model_train
+    estimator = model_validate
 
 ###############################################################################
 #                        Confirm model information                            #
