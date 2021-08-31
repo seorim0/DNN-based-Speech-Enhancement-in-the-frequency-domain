@@ -13,7 +13,7 @@ You can find a list that you can adjust in various ways at config.py, and they a
 * SI-SNR   
 * SI-SDR   
 
-  and you can join the loss functions with perceptual loss.   
+> and you can join the loss functions with perceptual loss.   
 * LMS
 * PMSQE
    
