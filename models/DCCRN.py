@@ -159,7 +159,7 @@ class DCCRN(nn.Module):
         if isinstance(self.enhance, nn.LSTM):
             self.enhance.flatten_parameters()
 
-    def forward(self, inputs):
+    def forward(self, inputs, targets=0):
         specs = self.stft(inputs)
         real = specs[:, :self.fft_len // 2 + 1]
         imag = specs[:, self.fft_len // 2 + 1:]
@@ -215,17 +215,21 @@ class DCCRN(nn.Module):
                 out = self.decoder[idx](out)
                 out = out[..., 1:]
 
-        if self.masking_mode == 'Direct(None make)':  # for spectral mapping 
-            out_real = out[:, 0]
-            out_imag = out[:, 1]
-            out_real = F.pad(out_real, [0, 0, 1, 0])
-            out_imag = F.pad(out_imag, [0, 0, 1, 0])
-
-            out_real = torch.where(real == 0, out_real * real, out_real)
-            out_imag = torch.where(imag == 0, out_imag * imag, out_imag)
+        if self.masking_mode == 'Direct(None make)': 
+            # for loss calculation
+            target_mags, _ = self.stft(target)
+            
+            # spectral mapping
+            out_real = out * torch.cos(phase)  # use noisy phase
+            out_imag = out * torch.sin(phase)
 
             out_spec = torch.cat([out_real, out_imag], 1)
 
+            out_wav = self.istft(out_spec)
+            out_wav = torch.squeeze(out_wav, 1)
+            out_wav = torch.clamp_(out_wav, -1, 1)
+
+            return out, target_mags, out_wav
         else:
             #    print('decoder', out.size())
             mask_real = out[:, 0]
@@ -255,11 +259,11 @@ class DCCRN(nn.Module):
 
             out_spec = torch.cat([out_real, out_imag], 1)
 
-        out_wav = self.istft(out_spec)
-        out_wav = torch.squeeze(out_wav, 1)
-        out_wav = torch.clamp_(out_wav, -1, 1)
+            out_wav = self.istft(out_spec)
+            out_wav = torch.squeeze(out_wav, 1)
+            out_wav = torch.clamp_(out_wav, -1, 1)
 
-        return out_real, out_imag, out_wav
+            return out_real, out_imag, out_wav
 
     def get_params(self, weight_decay=0.0):
         # add L2 penalty
