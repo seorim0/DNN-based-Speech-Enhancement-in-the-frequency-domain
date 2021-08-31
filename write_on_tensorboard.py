@@ -339,48 +339,48 @@ class Writer(SummaryWriter):
         # <Data>
         self.add_image('data/mixed_spectrogram',
                        plot_spectrogram_to_numpy(mixed_wav, cfg.fs, cfg.frm_samp, int(cfg.frm_samp * cfg.ratio),
-                                                 cfg.window_synthesis, None, [-150, -40], 'dB'), step,
+                                                 None, [-150, -40], 'dB'), step,
                        dataformats='HWC')
         self.add_image('data/clean_spectrogram',
                        plot_spectrogram_to_numpy(clean_wav, cfg.fs, cfg.frm_samp, int(cfg.frm_samp * cfg.ratio),
-                                                 cfg.window_synthesis, None, [-150, -40], 'dB'), step,
+                                                 None, [-150, -40], 'dB'), step,
                        dataformats='HWC')
         self.add_image('data/noise_spectrogram',
                        plot_spectrogram_to_numpy(noise_wav, cfg.fs, cfg.frm_samp, int(cfg.frm_samp * cfg.ratio),
-                                                 cfg.window_synthesis, None, [-150, -40], 'dB'), step,
+                                                 None, [-150, -40], 'dB'), step,
                        dataformats='HWC')
         self.add_image('data/clean_unwrap_phase',
                        plot_spectrogram_to_numpy(clean_wav, cfg.fs, cfg.frm_samp, int(cfg.frm_samp * cfg.ratio),
-                                                 cfg.window_synthesis, 'phase', [-500, 500], None), step,
+                                                 'phase', [-500, 500], None), step,
                        dataformats='HWC')
 
         # <Results>
         self.add_image('result/estimated_spectrogram',
                        plot_spectrogram_to_numpy(est_wav, cfg.fs, cfg.frm_samp, int(cfg.frm_samp * cfg.ratio),
-                                                 cfg.window_synthesis, None, [-150, -40], 'dB'), step,
+                                                 None, [-150, -40], 'dB'), step,
                        dataformats='HWC')
         self.add_image('result/estimated_unwrap_phase',
                        plot_spectrogram_to_numpy(est_wav, cfg.fs, cfg.frm_samp, int(cfg.frm_samp * cfg.ratio),
-                                                 cfg.window_synthesis, 'phase', [-500, 500], None), step,
+                                                 'phase', [-500, 500], None), step,
                        dataformats='HWC')
         self.add_image('result/estimated_magnitude-clean_magnitude',
                        plot_spectrogram_to_numpy(est_wav - clean_wav, cfg.fs, cfg.frm_samp,
-                                                 int(cfg.frm_samp * cfg.ratio), cfg.window_synthesis, None,
+                                                 int(cfg.frm_samp * cfg.ratio), None,
                                                  [-80, 80], 'dB'), step, dataformats='HWC')
         self.add_image('result/estimated_unwrap_phase-clean_unwrap_phase',
                        plot_spectrogram_to_numpy(est_wav - clean_wav, cfg.fs, cfg.frm_samp,
-                                                 int(cfg.frm_samp * cfg.ratio), cfg.window_synthesis, 'phase',
+                                                 int(cfg.frm_samp * cfg.ratio), 'phase',
                                                  [-500, 500], None), step, dataformats='HWC')
 
     def log_mask_spectrogram(self, est_mask_real, est_mask_imag, step):
         # <Data>
         self.add_image('result/estimated_mask_magnitude',
                        plot_mask_to_numpy(np.sqrt(est_mask_real ** 2 + est_mask_imag ** 2), cfg.fs, cfg.frm_samp,
-                                          int(cfg.frm_samp * cfg.ratio), shps.window_synthesis, 0, 2,
+                                          int(cfg.frm_samp * cfg.ratio), 0, 2,
                                           cmap=self.cmap_custom2), step, dataformats='HWC')
         self.add_image('result/estimated_mask_real',
                        plot_mask_to_numpy(est_mask_real, cfg.fs, cfg.frm_samp, int(cfg.frm_samp * cfg.ratio),
-                                          cfg.window_synthesis, -2, 2, cmap=self.cmap_custom), step, dataformats='HWC')
+                                          -2, 2, cmap=self.cmap_custom), step, dataformats='HWC')
         self.add_image('result/estimated_mask_imag',
                        plot_mask_to_numpy(est_mask_imag, cfg.fs, cfg.frm_samp, int(cfg.frm_samp * cfg.ratio),
-                                          cfg.window_synthesis, -2, 2, cmap=self.cmap_custom), step, dataformats='HWC')
+                                          -2, 2, cmap=self.cmap_custom), step, dataformats='HWC')
