@@ -3,7 +3,7 @@ import math
 import numpy as np
 import config as cfg
 from asteroid.losses import SingleSrcPMSQE, PITLossWrapper
-from asteroid_filterbanks import STFTFB, Encoder
+from asteroid_filterbanks import STFTFB, Encoder, transforms
 
 ############################################################################
 #               for model structure & loss function                        #
@@ -252,6 +252,18 @@ def get_array_lms_loss(clean_array, est_array):
 ############################################################################
 #                       for pmsqe loss function                            #
 ############################################################################
-pmsqe_stft = Encoder(STFTFB(kernel_size=512, n_filters=512, stride=256))
-get_array_pmsqe_loss = PITLossWrapper(SingleSrcPMSQE(), pit_from='pw_pt')
+pmsqe_stft = Encoder(STFTFB(kernel_size=512, n_filters=512, stride=256)).to(DEVICE)
+pmsqe_loss = PITLossWrapper(SingleSrcPMSQE(), pit_from='pw_pt').to(DEVICE)
 
+
+def get_array_pmsqe_loss(clean_array, est_array):
+    if clean_array.dim() == 2:
+        clean_wav = torch.unsqueeze(clean_array, 1)
+        est_wav = torch.unsqueeze(est_array, 1)
+    N, C, H = clean_wav.size()
+    clean_wav = clean_wav.contiguous().view(N, -1, cfg.fs)
+    est_wav = est_wav.contiguous().view(N, -1, cfg.fs)
+
+    clean_spec = transforms.mag(pmsqe_stft(clean_wav))
+    est_spec = transforms.mag(pmsqe_stft(est_wav))
+    return pmsqe_loss(est_spec, clean_spec)
