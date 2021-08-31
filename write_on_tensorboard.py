@@ -319,34 +319,68 @@ class Writer(SummaryWriter):
         self.add_scalar('train_loss', train_loss, step)
         self.add_scalar('vali_loss', vali_loss, step)
 
-    def log_C2N_loss(self, t_C2N_loss, v_C2N_loss, step):
-        self.add_scalar('t_C2N_loss', t_C2N_loss, step)
-        self.add_scalar('v_C2N_loss', v_C2N_loss, step)
-
-    def log_N2C_loss(self, t_N2C_loss, v_N2C_loss, step):
-        self.add_scalar('t_N2C_loss', t_N2C_loss, step)
-        self.add_scalar('v_N2C_loss', v_N2C_loss, step)
-
-    def log_perceptual_loss(self, train_main_loss, train_perceptual_loss, vali_main_loss, vali_perceptual_loss, step):
+    def log_sub_loss(self, train_main_loss, train_sub_loss, vali_main_loss, vali_sub_loss, step):
         self.add_scalar('train_main_loss', train_main_loss, step)
-        self.add_scalar('train_perceptual_loss', train_perceptual_loss, step)
+        self.add_scalar('train_sub_loss', train_sub_loss, step)
         self.add_scalar('vali_main_loss', vali_main_loss, step)
-        self.add_scalar('vali_perceptual_loss', vali_perceptual_loss, step)
+        self.add_scalar('vali_sub_loss', vali_sub_loss, step)
 
     def log_score(self, vali_pesq, vali_stoi, step):
         self.add_scalar('vali_pesq', vali_pesq, step)
         self.add_scalar('vali_stoi', vali_stoi, step)
 
-    def save_samples_we_want(self, name, mixed_wav, clean_wav, est_wav, step):
+    def log_wav(self, mixed_wav, clean_wav, est_wav, step):
         # <Audio>
-        self.add_audio(str(name) + '_mixed_wav', mixed_wav, step, cfg.fs)
-        self.add_audio(str(name) + '_clean_target_wav', clean_wav, step, cfg.fs)
-        self.add_audio(str(name) + '_estimated_wav', est_wav, step, cfg.fs)
+        self.add_audio('mixed_wav', mixed_wav, step, cfg.fs)
+        self.add_audio('clean_target_wav', clean_wav, step, cfg.fs)
+        self.add_audio('estimated_wav', est_wav, step, cfg.fs)
 
-    def save_cycle_samples_we_want(self, name, mixed_wav, clean_wav, est_clean_wav, est_noisy_wav, step):
-        # <Audio>
-        # <Audio>
-        self.add_audio(str(name) + '_mixed_wav', mixed_wav, step, cfg.fs)
-        self.add_audio(str(name) + '_clean_target_wav', clean_wav, step, cfg.fs)
-        self.add_audio(str(name) + '_estimated_clean_wav', est_clean_wav, step, cfg.fs)
-        self.add_audio(str(name) + '_estimated_noisy_wav', est_noisy_wav, step, cfg.fs)
+    def log_spectrogram(self, mixed_wav, clean_wav, noise_wav, est_wav, step):
+        # <Data>
+        self.add_image('data/mixed_spectrogram',
+                       plot_spectrogram_to_numpy(mixed_wav, cfg.fs, cfg.frm_samp, int(cfg.frm_samp * cfg.ratio),
+                                                 cfg.window_synthesis, None, [-150, -40], 'dB'), step,
+                       dataformats='HWC')
+        self.add_image('data/clean_spectrogram',
+                       plot_spectrogram_to_numpy(clean_wav, cfg.fs, cfg.frm_samp, int(cfg.frm_samp * cfg.ratio),
+                                                 cfg.window_synthesis, None, [-150, -40], 'dB'), step,
+                       dataformats='HWC')
+        self.add_image('data/noise_spectrogram',
+                       plot_spectrogram_to_numpy(noise_wav, cfg.fs, cfg.frm_samp, int(cfg.frm_samp * cfg.ratio),
+                                                 cfg.window_synthesis, None, [-150, -40], 'dB'), step,
+                       dataformats='HWC')
+        self.add_image('data/clean_unwrap_phase',
+                       plot_spectrogram_to_numpy(clean_wav, cfg.fs, cfg.frm_samp, int(cfg.frm_samp * cfg.ratio),
+                                                 cfg.window_synthesis, 'phase', [-500, 500], None), step,
+                       dataformats='HWC')
+
+        # <Results>
+        self.add_image('result/estimated_spectrogram',
+                       plot_spectrogram_to_numpy(est_wav, cfg.fs, cfg.frm_samp, int(cfg.frm_samp * cfg.ratio),
+                                                 cfg.window_synthesis, None, [-150, -40], 'dB'), step,
+                       dataformats='HWC')
+        self.add_image('result/estimated_unwrap_phase',
+                       plot_spectrogram_to_numpy(est_wav, cfg.fs, cfg.frm_samp, int(cfg.frm_samp * cfg.ratio),
+                                                 cfg.window_synthesis, 'phase', [-500, 500], None), step,
+                       dataformats='HWC')
+        self.add_image('result/estimated_magnitude-clean_magnitude',
+                       plot_spectrogram_to_numpy(est_wav - clean_wav, cfg.fs, cfg.frm_samp,
+                                                 int(cfg.frm_samp * cfg.ratio), cfg.window_synthesis, None,
+                                                 [-80, 80], 'dB'), step, dataformats='HWC')
+        self.add_image('result/estimated_unwrap_phase-clean_unwrap_phase',
+                       plot_spectrogram_to_numpy(est_wav - clean_wav, cfg.fs, cfg.frm_samp,
+                                                 int(cfg.frm_samp * cfg.ratio), cfg.window_synthesis, 'phase',
+                                                 [-500, 500], None), step, dataformats='HWC')
+
+    def log_mask_spectrogram(self, est_mask_real, est_mask_imag, step):
+        # <Data>
+        self.add_image('result/estimated_mask_magnitude',
+                       plot_mask_to_numpy(np.sqrt(est_mask_real ** 2 + est_mask_imag ** 2), cfg.fs, cfg.frm_samp,
+                                          int(cfg.frm_samp * cfg.ratio), shps.window_synthesis, 0, 2,
+                                          cmap=self.cmap_custom2), step, dataformats='HWC')
+        self.add_image('result/estimated_mask_real',
+                       plot_mask_to_numpy(est_mask_real, cfg.fs, cfg.frm_samp, int(cfg.frm_samp * cfg.ratio),
+                                          cfg.window_synthesis, -2, 2, cmap=self.cmap_custom), step, dataformats='HWC')
+        self.add_image('result/estimated_mask_imag',
+                       plot_mask_to_numpy(est_mask_imag, cfg.fs, cfg.frm_samp, int(cfg.frm_samp * cfg.ratio),
+                                          cfg.window_synthesis, -2, 2, cmap=self.cmap_custom), step, dataformats='HWC')
