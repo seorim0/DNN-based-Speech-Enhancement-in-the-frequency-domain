@@ -19,6 +19,7 @@ The results of the network can be evaluated through various objective metrics (P
     <li><a href="#loss-functions">Loss functions</a></li>
   </ol>
 </details>
+<br>
 
 
 ## Requirements
@@ -27,7 +28,6 @@ The results of the network can be evaluated through various objective metrics (P
 * Cuda 11.1
 * CuDNN 8.0.5
 * Pytorch 1.9.0
-<br>
 
 
 ## Getting Started   
