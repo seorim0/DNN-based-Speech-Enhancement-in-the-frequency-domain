@@ -14,9 +14,9 @@ The results of the network can be evaluated through various objective metrics (P
       <a href="#networks">Networks</a>
     </li>
     <li>
-      <a href="#learning methods">Learning methods</a>
+      <a href="#learning-methods">Learning methods</a>
     </li>
-    <li><a href="#loss functions">Loss functions</a></li>
+    <li><a href="#loss-functions">Loss functions</a></li>
   </ol>
 </details>
 
@@ -34,7 +34,7 @@ The results of the network can be evaluated through various objective metrics (P
 * T-F masking
 * Spectral mapping
 
-<!-- Loss functions -->
+<!-- LOSS FUNCTIONS -->
 ## Loss functions   
 * MSE   
 * SDR   
