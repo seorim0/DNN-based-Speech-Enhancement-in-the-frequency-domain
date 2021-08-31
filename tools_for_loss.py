@@ -5,13 +5,9 @@ import config as cfg
 from asteroid.losses import SingleSrcPMSQE, PITLossWrapper
 from asteroid_filterbanks import STFTFB, Encoder
 
-
 ############################################################################
 #               for model structure & loss function                        #
 ############################################################################
-L1Loss = torch.nn.L1Loss()
-
-
 def remove_dc(data):
     mean = torch.mean(data, -1, keepdim=True)
     data = data - mean
@@ -19,9 +15,6 @@ def remove_dc(data):
 
 
 def l2_norm(s1, s2):
-    # norm = torch.sqrt(torch.sum(s1*s2, 1, keepdim=True))
-    # norm = torch.norm(s1*s2, 1, keepdim=True)
-
     norm = torch.sum(s1 * s2, -1, keepdim=True)
     return norm
 
@@ -41,8 +34,6 @@ def sdr(s1, s2, eps=1e-8):
 
 
 def si_snr(s1, s2, eps=1e-8):
-    # s1 = remove_dc(s1)
-    # s2 = remove_dc(s2)
     s1_s2_norm = l2_norm(s1, s2)
     s2_s2_norm = l2_norm(s2, s2)
     s_target = s1_s2_norm / (s2_s2_norm + eps) * s2
@@ -103,6 +94,29 @@ def si_sdr(reference, estimation, eps=1e-8):
     return 10 * torch.log10(ratio + eps)
 
 
+############################################################################
+#                          for LMS loss function                           #
+############################################################################
+# MFCC (Mel Frequency Cepstral Coefficients)
+
+# based on a combination of this article:
+#     http://practicalcryptography.com/miscellaneous/machine-learning/...
+#         guide-mel-frequency-cepstral-coefficients-mfccs/
+# and some of this code:
+#     http://stackoverflow.com/questions/5835568/...
+#         how-to-get-mfcc-from-an-fft-on-a-signal
+# Set device
+DEVICE = torch.device(cfg.DEVICE)
+
+FFT_SIZE = cfg.fft_len
+
+# multi-scale MFCC distance
+if cfg.perceptual == 'LMS':
+    MEL_SCALES = [16, 32, 64]
+elif cfg.perceptual == 'PAM':
+    MEL_SCALES = [32, 64]
+    
+    
 class rmse(torch.nn.Module):
     def __init__(self):
         super(rmse, self).__init__()
@@ -114,17 +128,6 @@ class rmse(torch.nn.Module):
         return torch.mean(rmse)
 
 
-# ====================================================================
-#  MFCC (Mel Frequency Cepstral Coefficients)
-# ====================================================================
-
-# based on a combination of this article:
-#     http://practicalcryptography.com/miscellaneous/machine-learning/...
-#         guide-mel-frequency-cepstral-coefficients-mfccs/
-# and some of this code:
-#     http://stackoverflow.com/questions/5835568/...
-#         how-to-get-mfcc-from-an-fft-on-a-signal
-
 # conversions between Mel scale and regular frequency scale
 def freqToMel(freq):
     return 1127.01048 * math.log(1 + freq / 700.0)
@@ -132,7 +135,6 @@ def freqToMel(freq):
 
 def melToFreq(mel):
     return 700 * (math.exp(mel / 1127.01048) - 1)
-
 
 # generate Mel filter bank
 def melFilterBank(numCoeffs, fftSize=None):
@@ -182,24 +184,11 @@ def melFilterBank(numCoeffs, fftSize=None):
     return filterMat
 
 
-# ====================================================================
-#  Finally: a perceptual loss function (based on Mel scale)
-# ====================================================================
-# Set device
-DEVICE = torch.device('cuda')
-
-FFT_SIZE = cfg.fft_len
-
-# multi-scale MFCC distance
-if cfg.perceptual == 'LMS':
-    MEL_SCALES = [16, 32, 64]
-elif cfg.perceptual == 'PAM':
-    MEL_SCALES = [32, 64]
-
+# Finally: a perceptual loss function (based on Mel scale)
 
 # given a (symbolic Theano) array of size M x WINDOW_SIZE
-#     this returns an array M x N where each window has been replaced
-#     by some perceptual transform (in this case, MFCC coeffs)
+# this returns an array M x N where each window has been replaced
+# by some perceptual transform (in this case, MFCC coeffs)
 def perceptual_transform(x):
     # precompute Mel filterbank: [FFT_SIZE x NUM_MFCC_COEFFS]
     MEL_FILTERBANKS = []
@@ -261,114 +250,8 @@ def get_array_lms_loss(clean_array, est_array):
 
 
 ############################################################################
-#                            for pam loss                                  #
-############################################################################
-def mel_pow_transform(x):
-    # precompute Mel filterbank: [FFT_SIZE x NUM_MFCC_COEFFS]
-    MEL_FILTERBANKS = []
-    for scale in MEL_SCALES:
-        filterbank_npy = melFilterBank(scale, FFT_SIZE).transpose()
-        torch_filterbank_npy = torch.from_numpy(filterbank_npy).type(torch.FloatTensor)
-        MEL_FILTERBANKS.append(torch_filterbank_npy.to(DEVICE))
-
-    transforms = []
-    # powerSpectrum = torch_dft_mag(x, DFT_REAL, DFT_IMAG)**2
-
-    powerSpectrum = x.view(-1, FFT_SIZE // 2 + 1)
-    powerSpectrum = 1.0 / FFT_SIZE * powerSpectrum
-
-    for filterbank in MEL_FILTERBANKS:
-        filteredSpectrum = torch.mm(powerSpectrum, filterbank)
-        filteredSpectrum = 10.0*torch.log10(filteredSpectrum + 1e-7) + 90.302 # + 90.302dB
-        transforms.append(filteredSpectrum)
-
-    return transforms
-
-
-def mel_pow_transform_for_GMT(x):
-    # precompute Mel filterbank: [FFT_SIZE x NUM_MFCC_COEFFS]
-    MEL_FILTERBANKS = []
-    for scale in MEL_SCALES:
-        filterbank_npy = melFilterBank(scale, FFT_SIZE).transpose()
-        torch_filterbank_npy = torch.from_numpy(filterbank_npy).type(torch.FloatTensor)
-        MEL_FILTERBANKS.append(torch_filterbank_npy.to(DEVICE))
-
-    x = x.view(-1, FFT_SIZE // 2 + 1)
-
-    transforms = []
-
-    for filterbank in MEL_FILTERBANKS:
-        filteredSpectrum = torch.mm(x, filterbank)
-        filteredSpectrum = 10.0*torch.log10(filteredSpectrum + 1e-7)
-        transforms.append(filteredSpectrum)
-
-    return transforms
-
-
-# # perceptual loss function
-# class perceptual_distance(torch.nn.Module):
-#     def __init__(self):
-#         super(perceptual_distance, self).__init__()
-#
-#     def forward(self, y_true, y_pred):
-#         rmse_loss = rmse()
-#         # y_true = torch.reshape(y_true, (-1, WINDOW_SIZE))
-#         # y_pred = torch.reshape(y_pred, (-1, WINDOW_SIZE))
-#
-#         pvec_true = perceptual_transform(y_true)
-#         pvec_pred = perceptual_transform(y_pred)
-#
-#         distances = []
-#         for i in range(0, len(pvec_true)):
-#             error = rmse_loss(pvec_pred[i], pvec_true[i])
-#             error = error.unsqueeze(dim=-1)
-#             distances.append(error)
-#         distances = torch.cat(distances, axis=-1)
-#
-#         loss = torch.mean(distances, axis=-1)
-#         return torch.mean(loss)
-
-
-class pam_loss(torch.nn.Module):
-    def __init__(self):
-        super(pam_loss, self).__init__()
-
-    def forward(self, y_noise_spec, GMT):
-
-        pvec_noise = mel_pow_transform(y_noise_spec)
-        T = mel_pow_transform_for_GMT(GMT)
-
-        distances = []
-        for i in range(0, len(pvec_noise)):
-
-            # erase
-            error = torch.sum(torch.max(pvec_noise[i]-T[i], torch.zeros_like(pvec_noise[i])))
-
-            error = error.unsqueeze(dim=-1)
-            distances.append(error)
-        distances = torch.cat(distances, axis=-1)
-
-        loss = torch.mean(distances, axis=-1)
-        return torch.mean(loss)
-
-
-get_pam_loss = pam_loss()
-
-
-############################################################################
-#                            for pam plot                                  #
-############################################################################
-def spectral_analysis_SPL_normalization(current_frame_mag):
-    PN = 90.302
-
-    # x = current_frame_mag / cfg.fft_len
-    P = PN + 10 * np.log10(current_frame_mag ** 2 + 1e-16)  # Only first half is required
-
-    return P
-
-
-############################################################################
-#                            for pmsqe loss                                #
+#                       for pmsqe loss function                            #
 ############################################################################
 pmsqe_stft = Encoder(STFTFB(kernel_size=512, n_filters=512, stride=256))
-pmsqe = PITLossWrapper(SingleSrcPMSQE(), pit_from='pw_pt')
+get_array_pmsqe_loss = PITLossWrapper(SingleSrcPMSQE(), pit_from='pw_pt')
+
