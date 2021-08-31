@@ -5,7 +5,7 @@ import shutil
 import numpy as np
 import config as cfg
 import itertools
-from model import network
+from models import network  # you can import 'DCCRN' or 'CRN'
 from write_on_tensorboard import Writer
 from dataloader import create_dataloader
 from trainer import model_train, model_validate
