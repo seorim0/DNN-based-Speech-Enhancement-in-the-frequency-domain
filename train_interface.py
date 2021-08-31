@@ -4,7 +4,6 @@ import torch
 import shutil
 import numpy as np
 import config as cfg
-import itertools
 from models import DCCRN, CRN  # you can import 'DCCRN' or 'CRN'
 from write_on_tensorboard import Writer
 from dataloader import create_dataloader
