@@ -37,7 +37,11 @@ First, you can make noisy data by mixing clean speech and noise, and then you ca
 * scipy   
 * matplotlib   
 * tensorboardX   
-   
+
+## Tutorials
+'SE_tutorials.ipynb' was made for tutorial.   
+You can simply train the CRN with the colab file.   
+
 ## Reference   
 https://github.com/huyanxin/DeepComplexCRN   
 https://github.com/usimarit/semetrics     
