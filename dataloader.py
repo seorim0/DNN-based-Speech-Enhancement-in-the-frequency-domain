@@ -40,7 +40,6 @@ class Wave_Dataset(Dataset):
             print('Load the data...')
             self.input_path = "DATASET_FILE_PATH"
             self.input = np.load(self.input_path)
-            self.input = []
         elif mode == 'valid':
             self.mode = 'valid'
             print('<Validation dataset>')
