@@ -306,16 +306,6 @@ class ComplexConvTranspose2d(nn.Module):
         nn.init.constant_(self.real_conv.bias, 0.)
         nn.init.constant_(self.imag_conv.bias, 0.)
 
-        # # weight standardization
-        # self.real_conv = ConvTranspose2d(self.in_channels, self.out_channels, kernel_size, self.stride,
-        #                                     padding=self.padding, output_padding=output_padding, groups=self.groups)
-        # self.imag_conv = ConvTranspose2d(self.in_channels, self.out_channels, kernel_size, self.stride,
-        #                                     padding=self.padding, output_padding=output_padding, groups=self.groups)
-        # self.complex_axis = complex_axis
-        #
-        # nn.init.constant_(self.real_conv.bias, 0.)
-        # nn.init.constant_(self.imag_conv.bias, 0.)
-
     def forward(self, inputs):
 
         if isinstance(inputs, torch.Tensor):
