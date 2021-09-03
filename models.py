@@ -354,7 +354,7 @@ class CRN(nn.Module):
         output_dim = win_len
 
         self.rnn_input_size = rnn_input_size
-        self.rnn_units = rnn_units
+        self.rnn_units = rnn_units//2
         self.input_dim = input_dim
         self.output_dim = output_dim
         self.hidden_layers = rnn_layers
