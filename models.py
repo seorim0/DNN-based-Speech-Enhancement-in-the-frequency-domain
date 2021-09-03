@@ -230,7 +230,7 @@ class DCCRN(nn.Module):
 
         if self.masking_mode == 'Direct(None make)':
             # for loss calculation
-            target_specs = self.stft(inputs)
+            target_specs = self.stft(targets)
             target_real = target_specs[:, :self.fft_len // 2 + 1]
             target_imag = target_specs[:, self.fft_len // 2 + 1:]
 
