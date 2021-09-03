@@ -367,7 +367,7 @@ class CRN(nn.Module):
         bidirectional = False
 
         self.stft = ConvSTFT(self.win_len, self.win_inc, fft_len, self.win_type, 'real')
-        self.istft = ConviSTFT(self.win_len, self.win_inc, fft_len, self.win_type, 'real')
+        self.istft = ConviSTFT(self.win_len, self.win_inc, fft_len, self.win_type, 'complex')
 
         self.encoder = nn.ModuleList()
         self.decoder = nn.ModuleList()
