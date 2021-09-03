@@ -246,7 +246,7 @@ class DCCRN(nn.Module):
             out_wav = torch.squeeze(out_wav, 1)
             out_wav = torch.clamp_(out_wav, -1, 1)
 
-            return out_real, out_imag, target_real, target_imag, out_wav
+            return out_real, target_real, out_imag, target_imag, out_wav
         else:
             #    print('decoder', out.size())
             mask_real = out[:, 0]
