@@ -1,4 +1,4 @@
-# Speech Enhancement with Pytorch
+# DCCRN Using Various Methods
 You can do DNN-based speech enhancement(SE) in the frequency domain using various method through this repository.   
 First, you have to make noisy data by mixing clean speech and noise. The dataset is used for deep learning training.   
 And, you can adjust the type of the network and configuration in various ways, as shown below.   
@@ -62,6 +62,7 @@ You can simply train the CRN with the colab file without any preparation .
 > You can find a list that you can adjust in various ways at config.py, and they are:   
 * Real network   
    - convolutional recurrent network (CRN)   
+   it is a real version of DCCRN   
 * Complex network   
    - deep complex convolutional recurrent network (DCCRN) [[1]](https://arxiv.org/abs/2008.00264)  
 
