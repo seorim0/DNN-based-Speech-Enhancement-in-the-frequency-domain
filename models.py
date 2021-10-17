@@ -468,6 +468,7 @@ class CRN(nn.Module):
 
         out = mags
         out = out.unsqueeze(1)
+        out = out[:, :, 1:]
         encoder_out = []
 
         for idx, layer in enumerate(self.encoder):
@@ -489,7 +490,7 @@ class CRN(nn.Module):
             for idx in range(len(self.decoder)):
                 out = torch.cat([out, encoder_out[-1 - idx]], 1)
                 out = self.decoder[idx](out)
-                out = out[..., 1:, 1:]  #
+                out = out[..., 1:]  #
         else:
             for idx in range(len(self.decoder)):
                 out = self.decoder[idx](out)
@@ -514,6 +515,7 @@ class CRN(nn.Module):
             return out, target_mags, out_wav
         else:  # T-F masking
             # mask_mags = torch.clamp_(mask_mags,0,100)
+            out = F.pad(out, [0, 0, 1, 0])
             mask_mags = torch.tanh(out)
             est_mags = mask_mags * mags
             out_real = est_mags * torch.cos(phase)
