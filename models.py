@@ -576,7 +576,6 @@ class FullSubNet(BaseModel):
                  sb_model_hidden_size=cfg.sb_model_hidden_size,
                  weight_init=cfg.weight_init,
                  norm_type=cfg.norm_type,
-                 num_groups_in_drop_band=cfg.num_groups_in_drop_band,
                  ):
         """
         FullSubNet model (cIRM mask)
@@ -618,7 +617,6 @@ class FullSubNet(BaseModel):
         self.fb_num_neighbors = fb_num_neighbors
         self.look_ahead = look_ahead
         self.norm = self.norm_wrapper(norm_type)
-        self.num_groups_in_drop_band = num_groups_in_drop_band
 
         if weight_init:
             self.apply(self.weight_init)
