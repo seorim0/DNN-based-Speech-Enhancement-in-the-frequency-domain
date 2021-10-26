@@ -3,8 +3,10 @@ import torch.nn as nn
 import numpy as np
 import time
 import torch.nn.functional as F
+import torch.nn.init as init
 from scipy.signal import get_window
 import matplotlib.pylab as plt
+import config as cfg
 
 
 ############################################################################
@@ -641,7 +643,7 @@ def stft(y, n_fft=cfg.fft_len, hop_length=int(cfg.win_len*cfg.ola_ratio), win_le
         n_fft,
         hop_length,
         win_length,
-        window=torch.hann_window(n_fft).to(y.device),
+        window=torch.hann_window(win_length).to(y.device),
         return_complex=True
     )
 
@@ -673,7 +675,7 @@ def istft(features, n_fft=cfg.fft_len, hop_length=int(cfg.win_len*cfg.ola_ratio)
         n_fft,
         hop_length,
         win_length,
-        window=torch.hann_window(n_fft).to(features.device),
+        window=torch.hann_window(win_length).to(features.device),
         length=length
     )
 
@@ -817,9 +819,9 @@ class BaseModel(nn.Module):
         sub_band_unit_size = num_neighbor * 2 + 1
 
         # Pad to the top and bottom
-        output = functional.pad(output, [0, 0, num_neighbor, num_neighbor], mode="reflect")
+        output = F.pad(output, [0, 0, num_neighbor, num_neighbor], mode="reflect")
 
-        output = functional.unfold(output, (sub_band_unit_size, num_frames))
+        output = F.unfold(output, (sub_band_unit_size, num_frames))
         assert output.shape[-1] == num_freqs, f"n_freqs != N (sub_band), {num_freqs} != {output.shape[-1]}"
 
         # Split the dim of the unfolded feature
