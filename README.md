@@ -63,8 +63,9 @@ You can simply train the CRN with the colab file without any preparation .
 * Real network   
    - convolutional recurrent network (CRN)   
    it is a real version of DCCRN   
+   - FullSubNet [[1]](https://arxiv.org/abs/2010.15508)  
 * Complex network   
-   - deep complex convolutional recurrent network (DCCRN) [[1]](https://arxiv.org/abs/2008.00264)  
+   - deep complex convolutional recurrent network (DCCRN) [[2]](https://arxiv.org/abs/2008.00264)  
 
 <!-- LEARNING METHODS -->
 ## Learning Methods
