@@ -19,7 +19,7 @@ if chkpt_model is not None:
 #                         possible setting                            #
 #######################################################################
 # the list you can do
-model_list = ['DCCRN', 'CRN']
+model_list = ['DCCRN', 'CRN', 'FullSubNet']
 loss_list = ['MSE', 'SDR', 'SI-SNR', 'SI-SDR']
 perceptual_list = [False, 'LMS', 'PMSQE']
 lstm_type = ['real', 'complex']
@@ -69,6 +69,8 @@ rnn_input_size = 512
 #######################################################################
 # if the setting is wrong, print error message
 assert not (masking_mode == 'Direct(None make)' and perceptual is not False), \
+    "This setting is not created "
+assert not (model == 'FullSubNet' and perceptual is not False), \
     "This setting is not created "
 
 #######################################################################
