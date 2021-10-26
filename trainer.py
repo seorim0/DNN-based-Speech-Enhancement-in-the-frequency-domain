@@ -82,8 +82,44 @@ def model_perceptual_train(model, optimizer, train_loader, DEVICE):
     return train_loss, train_main_loss, train_perceptual_loss
 
 
+def fullsubnet_train(model, optimizer, train_loader, DEVICE):
+    # initialization
+    train_loss = 0
+    batch_num = 0
+
+    # arr = []
+    # train
+    model.train()
+    for inputs, targets in tools.Bar(train_loader):
+        batch_num += 1
+
+        # to cuda
+        inputs = inputs.float().to(DEVICE)
+        targets = targets.float().to(DEVICE)
+
+        noisy_complex = tools.stft(inputs)
+        clean_complex = tools.stft(targets)
+
+        noisy_mag, _ = tools.mag_phase(noisy_complex)
+        cIRM = tools.build_complex_ideal_ratio_mask(noisy_complex, clean_complex)
+
+        cRM = model(noisy_mag)
+        loss = model.loss(cRM, cIRM)
+        # # if you want to check the scale of the loss
+        # print('loss: {:.4}'.format(loss))
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        train_loss += loss
+    train_loss /= batch_num
+
+    return train_loss
+
+
 # Spectral mapping
-def complex_model_direct_train(model, optimizer, train_loader, DEVICE):
+def dccrn_direct_train(model, optimizer, train_loader, DEVICE):
     # initialization
     train_loss = 0
     batch_num = 0
@@ -115,7 +151,7 @@ def complex_model_direct_train(model, optimizer, train_loader, DEVICE):
     return train_loss
 
 
-def real_model_direct_train(model, optimizer, train_loader, DEVICE):
+def crn_direct_train(model, optimizer, train_loader, DEVICE):
     # initialization
     train_loss = 0
     batch_num = 0
@@ -270,8 +306,74 @@ def model_perceptual_validate(model, validation_loader, writer, dir_to_save, epo
         return validation_loss, validation_main_loss, validation_perceptual_loss, avg_pesq, avg_stoi
 
 
+def fullsubnet_validate(model, validation_loader, writer, dir_to_save, epoch, DEVICE):
+    # initialization
+    validation_loss = 0
+    batch_num = 0
+
+    avg_pesq = 0
+    avg_stoi = 0
+
+    # for record the score each samples
+    f_score = open(dir_to_save + '/Epoch_' + '%d_SCORES' % epoch, 'a')
+
+    model.eval()
+    with torch.no_grad():
+        for inputs, targets in tools.Bar(validation_loader):
+            batch_num += 1
+
+            # to cuda
+            inputs = inputs.float().to(DEVICE)
+            targets = targets.float().to(DEVICE)
+
+            noisy_complex = tools.stft(inputs)
+            clean_complex = tools.stft(targets)
+
+            noisy_mag, _ = tools.mag_phase(noisy_complex)
+            cIRM = tools.build_complex_ideal_ratio_mask(noisy_complex, clean_complex)
+
+            cRM = model(noisy_mag)
+            loss = model.loss(cRM, cIRM)
+
+            validation_loss += loss
+
+            # estimate the output speech with pesq and stoi
+            cRM = tools.decompress_cIRM(cRM)
+            enhanced_real = cRM[..., 0] * noisy_complex.real - cRM[..., 1] * noisy_complex.imag
+            enhanced_imag = cRM[..., 1] * noisy_complex.real + cRM[..., 0] * noisy_complex.imag
+            enhanced_complex = torch.stack((enhanced_real, enhanced_imag), dim=-1)
+            enhanced_outputs = tools.istft(enhanced_complex, length=inputs.size(-1))
+
+            estimated_wavs = enhanced_outputs.cpu().detach().numpy()
+            clean_wavs = targets.cpu().detach().numpy()
+
+            pesq = tools.cal_pesq(estimated_wavs, clean_wavs)
+            stoi = tools.cal_stoi(estimated_wavs, clean_wavs)
+
+            # pesq: 0.1 better / stoi: 0.01 better
+            for i in range(len(pesq)):
+                f_score.write('PESQ {:.6f} | STOI {:.6f}\n'.format(pesq[i], stoi[i]))
+
+            # reshape for sum
+            pesq = np.reshape(pesq, (1, -1))
+            stoi = np.reshape(stoi, (1, -1))
+
+            avg_pesq += sum(pesq[0]) / len(inputs)
+            avg_stoi += sum(stoi[0]) / len(inputs)
+
+        # save the samples to tensorboard
+        if epoch % 10 == 0:
+            writer.log_wav(inputs[0], targets[0], enhanced_outputs[0], epoch)
+
+        validation_loss /= batch_num
+        avg_pesq /= batch_num
+        avg_stoi /= batch_num
+
+        return validation_loss, avg_pesq, avg_stoi
+    
+    
 # Spectral mapping
-def complex_model_direct_validate(model, validation_loader, writer, dir_to_save, epoch, DEVICE):
+def dccrn_direct_validate(model, validation_loader, writer, dir_to_save, epoch, DEVICE):
     # initialization
     validation_loss = 0
     batch_num = 0
@@ -327,7 +429,7 @@ def complex_model_direct_validate(model, validation_loader, writer, dir_to_save,
         return validation_loss, avg_pesq, avg_stoi
     
 
-def real_model_direct_validate(model, validation_loader, writer, dir_to_save, epoch, DEVICE):
+def crn_direct_validate(model, validation_loader, writer, dir_to_save, epoch, DEVICE):
     # initialization
     validation_loss = 0
     batch_num = 0
