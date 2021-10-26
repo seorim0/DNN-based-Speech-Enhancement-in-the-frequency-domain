@@ -10,7 +10,7 @@ from dataloader import create_dataloader
 from trainer import model_train, model_validate, \
     model_perceptual_train, model_perceptual_validate, \
     dccrn_direct_train, dccrn_direct_validate, \
-    crn_model_direct_train, crn_direct_validate, \
+    crn_direct_train, crn_direct_validate, \
     fullsubnet_train, fullsubnet_validate
     
 
