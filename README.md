@@ -1,4 +1,4 @@
-# DCCRN Using Various Methods
+# DNN-based Speech Enhancement in the frequency domain
 You can do DNN-based speech enhancement(SE) in the frequency domain using various method through this repository.   
 First, you have to make noisy data by mixing clean speech and noise. The dataset is used for deep learning training.   
 And, you can adjust the type of the network and configuration in various ways, as shown below.   
