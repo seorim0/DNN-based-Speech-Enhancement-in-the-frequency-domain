@@ -4,14 +4,15 @@ import torch
 import shutil
 import numpy as np
 import config as cfg
-from models import DCCRN, CRN  # you can import 'DCCRN' or 'CRN'
+from models import DCCRN, CRN, FullSubNet  # you can import 'DCCRN' or 'CRN' or 'FullSubNet'
 from write_on_tensorboard import Writer
 from dataloader import create_dataloader
 from trainer import model_train, model_validate, \
     model_perceptual_train, model_perceptual_validate, \
-    complex_model_direct_train, complex_model_direct_validate, \
-    real_model_direct_train, real_model_direct_validate
-
+    dccrn_direct_train, dccrn_direct_validate, \
+    crn_model_direct_train, crn_direct_validate, \
+    fullsubnet_train, fullsubnet_validate
+    
 
 ###############################################################################
 #                        Helper function definition                           #
@@ -52,6 +53,8 @@ if cfg.model == 'DCCRN':
     model = DCCRN().to(DEVICE)
 elif cfg.model == 'CRN':
     model = CRN().to(DEVICE)
+elif cfg.model == 'FullSubNet':
+    model = FullSubNet().to(DEVICE)
 # Set optimizer and learning rate
 optimizer = torch.optim.Adam(model.parameters(), lr=cfg.learning_rate)
 total_params = calculate_total_params(model)
@@ -60,12 +63,15 @@ total_params = calculate_total_params(model)
 if cfg.perceptual is not False:
     trainer = model_perceptual_train
     estimator = model_perceptual_validate
+elif cfg.model == 'FullSubNet':
+    trainer = fullsubnet_train
+    estimator = fullsubnet_validate
 elif cfg.masking_mode == 'Direct(None make)' and cfg.model == 'DCCRN':
-    trainer = complex_model_direct_train
-    estimator = complex_model_direct_validate
+    trainer = dccrn_direct_train
+    estimator = dccrn_direct_validate
 elif cfg.masking_mode == 'Direct(None make)' and cfg.model == 'CRN':
-    trainer = real_model_direct_train
-    estimator = real_model_direct_validate
+    trainer = crn_direct_train
+    estimator = crn_direct_validate
 else:
     trainer = model_train
     estimator = model_validate
