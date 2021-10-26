@@ -3,7 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from tools_for_model import ConvSTFT, ConviSTFT, \
     ComplexConv2d, ComplexConvTranspose2d, NavieComplexLSTM, complex_cat, ComplexBatchNorm, \
-    RealConv2d, RealConvTranspose2d
+    RealConv2d, RealConvTranspose2d, \
+    BaseModel, SequenceModel
 import config as cfg
 from tools_for_loss import sdr, si_sdr, si_snr, get_array_lms_loss, get_array_pmsqe_loss
 
@@ -635,7 +636,7 @@ class FullSubNet(BaseModel):
         """
         if not noisy_mag.dim() == 4:
             noisy_mag = noisy_mag.unsqueeze(1)
-        noisy_mag = functional.pad(noisy_mag, [0, self.look_ahead])  # Pad the look ahead
+        noisy_mag = F.pad(noisy_mag, [0, self.look_ahead])  # Pad the look ahead
         batch_size, num_channels, num_freqs, num_frames = noisy_mag.size()
         assert num_channels == 1, f"{self.__class__.__name__} takes the mag feature as inputs."
 
@@ -671,7 +672,7 @@ class FullSubNet(BaseModel):
 
     def loss(self, estimated, target):
             if cfg.loss == 'MSE':
-                return functional.mse_loss(estimated, target, reduction='mean')
+                return F.mse_loss(estimated, target, reduction='mean')
             elif cfg.loss == 'SDR':
                 return -sdr(target, estimated)
             elif cfg.loss == 'SI-SNR':
