@@ -116,6 +116,13 @@ if cfg.chkpt_model is not None:  # Load the checkpoint
         mse_vali_total = np.concatenate((mse_vali_total, np.zeros(plus)), 0)
 else:  # First learning
     print('Starting new training run...')
+    
+    # make the file directory to save the models
+    if not os.path.exists(cfg.job_dir):
+        os.mkdir(cfg.job_dir)
+    if not os.path.exists(cfg.logs_dir):
+        os.mkdir(cfg.logs_dir)
+        
     epoch_start_idx = 1
     mse_vali_total = np.zeros(cfg.max_epochs)
 
