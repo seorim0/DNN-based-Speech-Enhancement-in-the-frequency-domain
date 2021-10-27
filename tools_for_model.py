@@ -717,6 +717,12 @@ def compress_cIRM(mask, K=10, C=0.1):
     return mask
 
 
+def decompress_cIRM(mask, K=10, limit=9.9):
+    mask = limit * (mask >= limit) - limit * (mask <= -limit) + mask * (torch.abs(mask) < limit)
+    mask = -K * torch.log((K - mask) / (K + mask))
+    return mask
+
+
 class SequenceModel(nn.Module):
     def __init__(
             self,
