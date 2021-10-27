@@ -104,7 +104,7 @@ def fullsubnet_train(model, optimizer, train_loader, DEVICE):
         cIRM = tools.build_complex_ideal_ratio_mask(noisy_complex, clean_complex)
 
         cRM = model(noisy_mag)
-        loss = model.loss(cRM, cIRM)
+        loss = model.loss(cIRM, cRM)
         # # if you want to check the scale of the loss
         # print('loss: {:.4}'.format(loss))
 
@@ -333,7 +333,7 @@ def fullsubnet_validate(model, validation_loader, writer, dir_to_save, epoch, DE
             cIRM = tools.build_complex_ideal_ratio_mask(noisy_complex, clean_complex)
 
             cRM = model(noisy_mag)
-            loss = model.loss(cRM, cIRM)
+            loss = model.loss(cIRM, cRM)
 
             validation_loss += loss
 
@@ -347,8 +347,8 @@ def fullsubnet_validate(model, validation_loader, writer, dir_to_save, epoch, DE
             estimated_wavs = enhanced_outputs.cpu().detach().numpy()
             clean_wavs = targets.cpu().detach().numpy()
 
-            pesq = tools.cal_pesq(estimated_wavs, clean_wavs)
-            stoi = tools.cal_stoi(estimated_wavs, clean_wavs)
+            pesq = cal_pesq(estimated_wavs, clean_wavs)
+            stoi = cal_stoi(estimated_wavs, clean_wavs)
 
             # pesq: 0.1 better / stoi: 0.01 better
             for i in range(len(pesq)):
