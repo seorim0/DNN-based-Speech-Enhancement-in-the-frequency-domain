@@ -94,7 +94,13 @@ You can simply train the CRN with the colab file without any preparation .
   
 
 ## Reference   
-https://github.com/huyanxin/DeepComplexCRN   
+**DCCRN: Deep Complex Convolution Recurrent Network for Phase-Aware Speech Enhancement**   
+Yanxin Hu, Yun Liu, Shubo Lv, Mengtao Xing, Shimin Zhang, Yihui Fu, Jian Wu, Bihong Zhang, Lei Xie   
+[[arXiv]](https://arxiv.org/abs/2008.00264)  [[code]](https://github.com/huyanxin/DeepComplexCRN)   
+**FullSubNet: A Full-Band and Sub-Band Fusion Model for Real-Time Single-Channel Speech Enhancement**    
+Xiang Hao, Xiangdong Su, Radu Horaud, Xiaofei Li   
+[[arXiv]](https://arxiv.org/abs/2010.15508)  [[code]](https://github.com/haoxiangsnr/FullSubNet)
+**Other tools**
 https://github.com/usimarit/semetrics     
 https://ecs.utdallas.edu/loizou/speech/software.htm   
-https://github.com/haoxiangsnr/FullSubNet   
+
