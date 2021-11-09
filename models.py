@@ -499,6 +499,7 @@ class CRN(nn.Module):
 
         # mask_mags = F.pad(out, [0, 0, 1, 0])
         out = out.squeeze(1)
+        out = F.pad(out, [0, 0, 1, 0])
 
         # for loss calculation
         target_mags, _ = self.stft(targets)
