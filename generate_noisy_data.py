@@ -73,7 +73,7 @@ def main():
         print('Error: Invalid input arguments')
         print('\t Usage: python generate_noisy_data.py [mode] [snr] [fs]')
         print("\t\t [mode]: 'train', 'validation'")
-        print("\t\t [snr]: '[0]', '[0, 5]', ...'")
+        print("\t\t [snr]: '0', '0, 5', ...'")
         print("\t\t [fs]: '16000', ...")
         exit()
     mode = argvs[0]
