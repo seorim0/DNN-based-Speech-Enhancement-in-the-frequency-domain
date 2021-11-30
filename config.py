@@ -23,7 +23,7 @@ model_list = ['DCCRN', 'CRN', 'FullSubNet']
 loss_list = ['MSE', 'SDR', 'SI-SNR', 'SI-SDR']
 perceptual_list = [False, 'LMS', 'PMSQE']
 lstm_type = ['real', 'complex']
-main_net = ['LSTM', 'GLU']
+main_net = ['LSTM', 'GRU']
 mask_type = ['Direct(None make)', 'E', 'C', 'R']
 
 # experiment number setting
