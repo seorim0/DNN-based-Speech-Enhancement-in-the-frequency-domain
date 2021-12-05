@@ -812,7 +812,7 @@ class BaseModel(nn.Module):
             num_neighbor:
 
         Returns:
-            [B, N, C, F_s, T], F 为子频带的频率轴大小, e.g. [2, 161, 1, 19, 200]
+            [B, N, C, F_s, T], F, e.g. [2, 161, 1, 19, 200]
         """
         assert input.dim() == 4, f"The dim of input is {input.dim()}. It should be four dim."
         batch_size, num_channels, num_freqs, num_frames = input.size()
@@ -847,7 +847,7 @@ class BaseModel(nn.Module):
 
         Notes:
             1. 255 and 256 freq not able to be trained
-            2. batch size 应该被 3 整除，否则最后一部分 batch 内的频率无法很好的训练
+            2. batch size 
 
         Returns:
             [60, 85, 1, 36, 200]
@@ -880,8 +880,6 @@ class BaseModel(nn.Module):
     @staticmethod
     def sband_forgetting_norm(input, train_sample_length):
         """
-        与 forgetting norm相同，但使用拼接后模型的中间频带来计算均值
-        效果不好
         Args:
             input:
             train_sample_length:
@@ -917,11 +915,9 @@ class BaseModel(nn.Module):
     @staticmethod
     def forgetting_norm(input, sample_length_in_training):
         """
-        输入为三维，通过不断估计邻近的均值来作为当前 norm 时的均值
-
         Args:
             input: [B, F, T]
-            sample_length_in_training: 训练时的长度，用于计算平滑因子
+            sample_length_in_training:
 
         Returns:
 
