@@ -157,7 +157,7 @@ writer = Writer(dir_to_logs)
 #                                    Train                                    #
 ###############################################################################
 if cfg.perceptual is not False:  # train with perceptual loss function
-    for epoch in range(epoch_start_idx, cfg.max_epochs):
+    for epoch in range(epoch_start_idx, cfg.max_epochs + 1):
         start_time = time.time()
         # Training
         train_loss, train_main_loss, train_perceptual_loss = trainer(model, optimizer, train_loader, DEVICE)
@@ -196,7 +196,7 @@ if cfg.perceptual is not False:  # train with perceptual loss function
         mse_vali_total[epoch - 1] = vali_loss
         np.save(str(dir_to_save + '/mse_vali_total.npy'), mse_vali_total)
 else:
-    for epoch in range(epoch_start_idx, cfg.max_epochs):
+    for epoch in range(epoch_start_idx, cfg.max_epochs + 1):
         start_time = time.time()
         # Training
         train_loss = trainer(model, optimizer, train_loader, DEVICE)
