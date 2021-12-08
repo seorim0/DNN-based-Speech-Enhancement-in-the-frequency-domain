@@ -517,7 +517,7 @@ class CRN(nn.Module):
             return out, target_mags, out_wav
         else:  # T-F masking
             # mask_mags = torch.clamp_(mask_mags,0,100)
-            out = F.pad(out, [0, 0, 1, 0])
+            # out = F.pad(out, [0, 0, 1, 0])
             mask_mags = torch.tanh(out)
             est_mags = mask_mags * mags
             out_real = est_mags * torch.cos(phase)
